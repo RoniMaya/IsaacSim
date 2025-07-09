@@ -16,7 +16,7 @@
 import numpy as np
 from isaacsim import SimulationApp
 
-simulation_app = SimulationApp({"headless": False})
+simulation_app = SimulationApp({"headless": True})
 
 import omni.usd
 from isaacsim.core.api import World
@@ -57,7 +57,8 @@ dynamic_cube = DynamicCuboid(
     size=0.3,
     color=np.array([0, 255, 255]),
 )
-
+# Create the RigidPrim wrapper for applying forces
+from isaacsim.core.prims import RigidPrim
 # start a world to step simulator
 my_world = World(stage_units_in_meters=1.0)
 
@@ -79,6 +80,12 @@ for i in range(3):
         prim.apply_collision_apis()
 
     for j in range(100):
+        if i == 1:
+            force = np.array([0.0, 0.0, 50.0])  # N in +Z
+            position = visual_cube.get_world_poses()[0]
+            visual_cube.apply_forces_and_torques_at_pos(forces=force, positions=position)
+            print(position)
+
         my_world.step(render=True)  # stepping through the simulation
 
 # shutdown the simulator automatically

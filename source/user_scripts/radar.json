@@ -1,0 +1,19 @@
+{
+    "WaveLengthMm": 3.9,
+    "TraceTreeDepth": 2,
+    "AntennaGainMode": "COSINEFALLOFF",
+    "CfarMode": "2D",
+    "ScanCfgs": [
+        {
+            "BinsFromSpec": true,
+            "MaxRangeM": 150.0,
+            "MaxAzAngDeg": 60.0,
+            "MaxElAngDeg": 15.0,
+            "RangeResM": 5.0,
+            "VelResMps": 0.2,
+            "BoreAzResDeg": 10.0,
+            "BoreElResDeg": 10.0,
+            "RangeNoiseSDev": 0.05
+        }
+    ]
+}

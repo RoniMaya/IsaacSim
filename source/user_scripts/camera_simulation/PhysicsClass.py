@@ -52,12 +52,12 @@ class PhysicsClass():
         """
 
         roll, pitch, yaw = 0.0,0.0,0.0  # Assuming prev_angles is a numpy array with [yaw, pitch, roll]
-        if "I" in pressed_keys: pitch -= delta_angle
-        if "K" in pressed_keys: pitch += delta_angle
-        if "J" in pressed_keys: yaw += delta_angle
-        if "L" in pressed_keys: yaw -= delta_angle
-        if "U" in pressed_keys: roll -= delta_angle
-        if "O" in pressed_keys: roll += delta_angle
+        if "8" in pressed_keys: pitch -= delta_angle
+        if "5" in pressed_keys: pitch += delta_angle
+        if "4" in pressed_keys: yaw += delta_angle
+        if "6" in pressed_keys: yaw -= delta_angle
+        if "7" in pressed_keys: roll -= delta_angle
+        if "9" in pressed_keys: roll += delta_angle
         return np.array([roll, pitch, yaw])  # Assuming roll is not needed
         
             

@@ -17,7 +17,7 @@
             },
             "python": "${workspaceFolder}/_build/linux-x86_64/release/kit/python/bin/python3",
             "envFile": "${workspaceFolder}/.vscode/.python_samples.env",
-            "args": "",
+            "args": "--/app/sensors/nv/radar/runWithoutMBVH=true",
             "preLaunchTask": "setup_python_env"
         },
         {
@@ -33,7 +33,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/_build/linux-x86_64/release/kit/kit",
             "args": ["${workspaceFolder}/_build/linux-x86_64/release/apps/isaacsim.exp.full.kit",
-                "--ext-folder", "${workspaceFolder}/_build/linux-x86_64/release/apps"],
+                "--ext-folder", "${workspaceFolder}/_build/linux-x86_64/release/apps",
+                "--/app/sensors/nv/radar/runWithoutMBVH=true",],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -53,7 +54,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/_build/linux-x86_64/debug/kit/kit",
             "args": ["${workspaceFolder}/_build/linux-x86_64/debug/apps/isaacsim.exp.full.kit",
-                "--ext-folder", "${workspaceFolder}/_build/linux-x86_64/debug/apps"],
+                "--ext-folder", "${workspaceFolder}/_build/linux-x86_64/debug/apps",
+                "--/app/sensors/nv/radar/runWithoutMBVH=true",],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

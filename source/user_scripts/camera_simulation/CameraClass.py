@@ -8,7 +8,7 @@ import carb
 import subprocess
 import threading
 import queue  # IMPORTANT: For thread-safe communication
-from PIL import Image
+from PIL import Image,ImageDraw,ImageFont
 
 
 # --- Isaac Sim Core Imports ---
@@ -103,9 +103,9 @@ class CameraClass():
         """
 
         zoom_factor = 1  # Define a zoom factor for zooming in and out
-        if "G" in pressed_keys:
+        if "+" in pressed_keys:
             zoom_factor -= 0.05
-        if "B" in pressed_keys:
+        if "-" in pressed_keys:
             zoom_factor += 0.05
         return zoom_factor
         
@@ -145,9 +145,16 @@ class CameraClass():
         return self.camera.get_rgba()
 
 
-    def frame_in_bytes(self):
+    def frame_in_bytes(self,text_to_add = None):
         frame_rgba = self.get_frame()
         if frame_rgba is not None and frame_rgba.size > 0:
+
+            if text_to_add is not None:
+                frame_rgba = Image.fromarray(frame_rgba)
+                I1 = ImageDraw.Draw(frame_rgba)
+                font = ImageFont.truetype("DejaVuSansMono.ttf", 18)
+                I1.text((28, 36), text_to_add, fill=(255, 0, 0), font = font)
+                frame_rgba = np.array(frame_rgba)
             return frame_rgba[:, :, :3].astype(np.uint8).tobytes()
         
         

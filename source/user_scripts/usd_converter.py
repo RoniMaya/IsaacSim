@@ -29,15 +29,15 @@ async def convert(input_asset_path, output_asset_path):
     asset_converter_context=converter_context  # <-- Pass it here
     )
 
-    stage = Usd.Stage.Open(output_asset_path)
-    UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
-    print("Up Axis:", UsdGeom.GetStageUpAxis(stage))  # Should print 'Z'
     success = await task.wait_until_finished()
     if not success:
         print("❌ Conversion failed")
         print("Status:", task.get_status())
         print("Error:", task.get_error_message())
     else:
+        stage = Usd.Stage.Open(output_asset_path)
+        UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
+        print("Up Axis:", UsdGeom.GetStageUpAxis(stage))  # Should print 'Z'
         print("✅ Conversion succeeded")
 
         

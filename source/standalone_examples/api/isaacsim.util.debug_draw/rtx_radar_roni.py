@@ -15,21 +15,10 @@
 
 import argparse
 import sys
-import json
-
-import multiprocessing as mp
-
-
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--config", type=str, default="Example_highRes", help="Name of radar config.")
+parser.add_argument("-c", "--config", type=str, default="Example", help="Name of radar config.")
 args, _ = parser.parse_known_args()
-
-
-config_path = '/home/ronim/isaacsim/source/user_scripts/radar.json'
-with open(config_path, "r") as f:
-    radar_config = json.load(f)
-
 
 from isaacsim import SimulationApp
 
@@ -47,9 +36,7 @@ from pxr import Gf
 from isaacsim.core.api.objects import DynamicCuboid
 from isaacsim.core.api import World
 from isaacsim.core.prims import RigidPrim
-import matplotlib.pyplot as plt
 
-from isaacsim.sensors.rtx import LidarRtx, get_gmo_data
 # enable ROS bridge extension
 enable_extension("isaacsim.util.debug_draw")
 
@@ -77,14 +64,21 @@ world = World()
 dynamic_cube = DynamicCuboid(prim_path="/World/cube", translation=(0, 5, 1), scale=(1, 1, 1))
 rigid_cube = RigidPrim("/World/cube")
 
+# dynamic_cube = DynamicCuboid(prim_path="/World/cube2", translation=(5, 0, 1), scale=(1, 1, 1))
+# rigid_cube = RigidPrim("/World/cube2")
+
+# dynamic_cube = DynamicCuboid(prim_path="/World/cube3", translation=(0, -5, 1), scale=(1, 1, 1))
+# rigid_cube = RigidPrim("/World/cube3")
+
+# dynamic_cube = DynamicCuboid(prim_path="/World/cube4", translation=(-5, 0, 1), scale=(1, 1, 1))
+# rigid_cube = RigidPrim("/World/cube4")
 
 world.scene.add_default_ground_plane()
 
 
 simulation_app.update()
 
-# radar_config = args.config
-sensor_attributes = {'omni:sensor:WpmDmat:scan:s001:maxRangeM': 50}
+radar_config = args.config
 
 # Create the radar sensor that generates data into "RtxSensorCpu"
 # Sensor needs to be rotated 90 degrees about +Z so it faces warehouse shelves.
@@ -96,9 +90,8 @@ _, sensor = omni.kit.commands.execute(
     config=radar_config,
     translation=(0, 0, 1.0),
     orientation=Gf.Quatd(0.70711, 0.0, 0.0, 0.70711),
-    **sensor_attributes
 )
-# hydra_texture = rep.create.render_product(sensor.GetPath(), [1, 1], name="Isaac")
+hydra_texture = rep.create.render_product(sensor.GetPath(), [1, 1], name="Isaac")
 
 render_product = rep.create.render_product(sensor.GetPath(), [1, 1], name="RtxRadarOutput")
 
@@ -111,8 +104,8 @@ simulation_app.update()
 annotator.attach([render_product])
 
 # Create the debug draw pipeline in the post process graph
-# writer = rep.writers.get("RtxRadar" + "DebugDrawPointCloud")
-# writer.attach([hydra_texture])
+writer = rep.writers.get("RtxRadar" + "DebugDrawPointCloud")
+writer.attach([hydra_texture])
 
 simulation_app.update()
 
@@ -122,11 +115,7 @@ world.reset()
 while simulation_app.is_running():
     simulation_app.update()
     radar_data = annotator.get_data()
-    gmo_buffer = radar_data["info"]["sensorOutputBuffer"]
-    # Read GenericModelOutput struct from buffer
-    carb.log_warn("attempting to get data from buffer")
-    gmo = get_gmo_data(gmo_buffer)
-    print(radar_data['data'])
+
 
 
 # cleanup and shutdown

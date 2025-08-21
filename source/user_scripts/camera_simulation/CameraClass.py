@@ -155,6 +155,6 @@ class CameraClass():
                 font = ImageFont.truetype("DejaVuSansMono.ttf", 18)
                 I1.text((28, 36), text_to_add, fill=(255, 0, 0), font = font)
                 frame_rgba = np.array(frame_rgba)
-            return frame_rgba[:, :, :3].astype(np.uint8).tobytes()
+            return frame_rgba[:, :, :3].tobytes()
         
         

@@ -24,7 +24,6 @@ from pxr import Usd, UsdGeom, UsdPhysics
 import os
 
 
-
 width = 640
 height = 360
 physics_frequency = 90  # Hz
@@ -32,27 +31,68 @@ rendering_frequency = 90  # Frames per second
 render_every_n_frame = int(physics_frequency / rendering_frequency)
 asset_speed = 80  # Speed of the asset in the simulation
 delta_angle = 0.5
-
+bitrate = "2.5M" 
+gop = "90"  # set 30 for 30fps, 60 for 60fps, etc.
 
 ffmpeg_process = subprocess.Popen([
     "ffmpeg",
+    "-loglevel", "warning",
+
+    # input (raw RGB frames from stdin)
     "-f", "rawvideo",
     "-pix_fmt", "rgb24",
     "-s", f"{width}x{height}",
     "-r", str(rendering_frequency),
     "-i", "-",
-    "-c:v", "libx264",
-    "-preset", "ultrafast",
-    "-tune", "zerolatency",
+    "-an",
+
+    # --- GPU encoding (NVENC) ---
+    "-c:v", "h264_nvenc",
+    "-preset", "p1",          # fastest
+    "-tune", "ll",            # low latency (supported)
+    "-rc", "cbr",             # plain CBR (portable)
+    "-b:v", bitrate,
+    "-maxrate", bitrate,
+    "-bufsize", "200k",
+    "-rc-lookahead", "0",     # no lookahead = lower latency
+    "-no-scenecut", "1",      # avoid surprise IDRs
+    "-bf", "0",               # no B-frames (latency)
+
+    # GOP / keyframes (keep stable latency)
+    "-g", gop,
+    "-keyint_min", gop,
+
+    # output formatting
     "-pix_fmt", "yuv420p",
-    "-g", "30",
-    "-keyint_min", "30",  # consistent keyframes every 30 frames
-    "-sc_threshold", "0",  # disable scene-change keyframes
-    "-bufsize", "50k",    # small buffer
+    "-fflags", "nobuffer",
+    "-flags", "low_delay",
+
+    # RTSP
     "-f", "rtsp",
-    "-rtsp_transport", "tcp",  # add this
-    "rtsp://localhost:8554/mystream"
+    "-rtsp_transport", "udp",
+    "rtsp://127.0.0.1:8554/mystream",   # force IPv4
 ], stdin=subprocess.PIPE)
+
+
+# ffmpeg_process = subprocess.Popen([
+#     "ffmpeg",
+#     "-f", "rawvideo",
+#     "-pix_fmt", "rgb24",
+#     "-s", f"{width}x{height}",
+#     "-r", str(rendering_frequency),
+#     "-i", "-",
+#     "-c:v", "libx264",
+#     "-preset", "ultrafast",
+#     "-tune", "zerolatency",
+#     "-pix_fmt", "yuv420p",
+#     "-g", "30",
+#     "-keyint_min", "30",  # consistent keyframes every 30 frames
+#     "-sc_threshold", "0",  # disable scene-change keyframes
+#     "-bufsize", "50k",    # small buffer
+#     "-f", "rtsp",
+#     "-rtsp_transport", "tcp",  # add this
+#     "rtsp://localhost:8554/mystream"
+# ], stdin=subprocess.PIPE)
 
 
 server = ServerManager(ffmpeg_process,stream_http = False)
@@ -61,7 +101,6 @@ server = ServerManager(ffmpeg_process,stream_http = False)
 
 # open_stage("/home/ronim/Downloads/Showcases_Content_NVD@10011/Samples/Showcases/2023_2_1/IsaacWarehouse/IsaacWarehouse.usd")
 
-# open_stage("//home/ronim/Documents/gauss_try/gauss_try.usd")
 # open_stage("//home/ronim/Documents/gauss_try/gauss_try.usd")
 stage_path = os.path.join(os.path.expanduser("~"), "Documents", "cesium", "ogmar_at_origin.usd")
 

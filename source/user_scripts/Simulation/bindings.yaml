@@ -1,0 +1,56 @@
+# profiles_bindings.yaml
+schema: inputmap/simple-v1
+
+normalize:
+  keycase: upper
+
+# Per-target default profiles (YAML anchors)
+profiles:
+  camera: &camera
+    target: camera
+    speed:  60.0     # m/s for translate
+    frame:  local   # local|world
+    deg_s:  0.5      # deg/s for rotate
+    zoom_factor:  0.05
+
+  cube2: &cube2
+    target: cube2
+    speed:  5.0
+    frame:  local
+    deg_s:  0.5
+    
+
+devices:
+  keyboard1:
+          # --- cube1 movement (WASD + R/F vertical, 4/6 yaw) ---
+          Q: { <<: *camera, axis: "+Z" , key_stat:"held"}
+          E: { <<: *camera, axis: "-Z" , key_stat:"held"}
+          D: { <<: *camera, axis: "-Y" , key_stat:"held"}
+          A: { <<: *camera, axis: "+Y" , key_stat:"held"}
+          S: { <<: *camera, axis: "-X" , key_stat:"held"}
+          W: { <<: *camera, axis: "+X" , key_stat:"held"}
+          "4": { <<: *camera, axis: "+YAW" , key_stat:"held"}
+          "6": { <<: *camera, axis: "-YAW" , key_stat:"held"}
+          "5": { <<: *camera, axis: "+PITCH" , key_stat:"held"}
+          "8": { <<: *camera, axis: "-PITCH" , key_stat:"held"}
+          "7": { <<: *camera, axis: "+ROLL" , key_stat:"held"}
+          "9": { <<: *camera, axis: "-ROLL" , key_stat:"held"}
+          "R": { <<: *camera, axis: "+ZOOM" , key_stat:"held"}
+          "F": { <<: *camera, axis: "-ZOOM" , key_stat:"held"}
+          
+          
+          # --- cube2 movement (T/G forward/back, 7/9 yaw) ---
+          Y: { <<: *cube2, axis: "+Z" , key_stat:"held"}
+          I: { <<: *cube2, axis: "-Z" , key_stat:"held"}
+          K: { <<: *cube2, axis: "-Y" , key_stat:"held"}
+          H: { <<: *cube2, axis: "+Y" , key_stat:"held"}
+          J: { <<: *cube2, axis: "-X" , key_stat:"held"}
+          U: { <<: *cube2, axis: "+X" , key_stat:"held"}
+          "M": { <<: *cube2, axis: "+YAW" , key_stat:"held"}
+          "N": { <<: *cube2, axis: "-YAW" , key_stat:"held"}
+
+
+
+
+  keyboard2:
+          P: { <<: *cube2, axis: "+PITCH" , key_stat:"held"}

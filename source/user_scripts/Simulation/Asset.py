@@ -1,5 +1,5 @@
 
-from isaacsim.core.prims import RigidPrim
+from isaacsim.core.prims import RigidPrim,GeometryPrim
 import numpy as np
 from omni.isaac.core.prims import XFormPrim
 import omni.kit.commands
@@ -12,10 +12,12 @@ import Utils
 
 class Asset():
     """Represents an asset in the simulation, managing its visual and physical properties."""
-    def __init__(self, prim_path, rigid_prim = True):
+    def __init__(self, prim_path, rigid_prim = True, geometry_prim = False):
 
         self.visual = XFormPrim(prim_path)
         self.rigid = RigidPrim(prim_path) if rigid_prim == True else None
+        self.geometry = GeometryPrim(prim_path) if geometry_prim == True else None
+
         self.prim_path = prim_path
 
 
@@ -40,26 +42,45 @@ class Asset():
 
         self.visual.set_local_scale(scale=scale)
 
-    def set_velocity_local(self, velocity):
+    def set_velocity_local(self, velocity,orientation):
         """
         Sets the linear velocity of the asset in local coordinates in world coordinates.
         Args:
             velocity (np.ndarray): A numpy array specifying the local velocity vector [vx, vy, vz] in world coordinates.
         """
-        _, orientation = self.rigid.get_world_poses() # get the current pose and orientation of the rigid body - in world coordinates
-        world_velocity = Utils.quat_rotate_numpy(orientation[0], velocity)
+        world_velocity = Utils.quat_rotate_numpy(orientation, velocity)
         self.rigid.set_linear_velocities([world_velocity])
 
 
-    def set_angular_velocity_local(self, angular_velocity):
+    def set_angular_velocity_local(self, angular_velocity,orientation):
         """
         Sets the angular velocity of the asset in local coordinates in world coordinates.
         Args:
             angular_velocity (np.ndarray): A numpy array specifying the local angular velocity vector [wx, wy, wz] in world coordinates.
         """
-        _, orientation = self.rigid.get_world_poses() # get the current pose and orientation of the rigid body - in world coordinates
-        angular_velocity = Utils.quat_rotate_numpy(orientation[0], angular_velocity[0])
+        angular_velocity = Utils.quat_rotate_numpy(orientation, angular_velocity[0])
         self.rigid.set_angular_velocities([angular_velocity])
 
 
+    def get_position_and_orientation(self):
+        """
+        Returns the current position of the asset's visual representation.
+        Returns:
+            np.ndarray: A numpy array representing the current position [x, y, z] of the asset.
+        """
+        translation, orientation = self.rigid.get_world_poses()
+        return translation[0], orientation[0]
 
+    def get_velocity(self):
+        """
+        Returns the current linear velocity of the asset.
+        Returns:
+            np.ndarray: A numpy array representing the current linear velocity [vx, vy, vz] of the asset.
+        """
+        
+        return self.rigid.get_linear_velocities()[0]
+
+    def get_linear_velocity(self,orientation):
+
+        return self.rigid.get_linear_velocities()[0]
+         

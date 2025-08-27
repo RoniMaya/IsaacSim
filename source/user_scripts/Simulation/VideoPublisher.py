@@ -21,22 +21,24 @@ class VideoPublisher():
             height (int): Height of the video frames.
             width (int): Width of the video frames.
             video_rb (RingBuffer): Ring buffer to hold video frames."""
+        
+
         self.ffmpeg_props = [
-            "ffmpeg",
-            "-f", "rawvideo",
-            "-pix_fmt", "rgb24",
-            "-video_size", f"{width}x{height}",
-            "-framerate", f"{target_fps}",        # input framerate
-            "-i", "-",
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-tune", "zerolatency",
-            "-pix_fmt", "yuv420p",
-            "-g", "120", "-keyint_min", "120",
-            "-sc_threshold", "0",
-            "-maxrate", "4M", "-bufsize", "8M",
-            "-f", "rtsp", "-rtsp_transport", "tcp",
-            "rtsp://localhost:8554/mystream"
+            "ffmpeg", # runs the FFmpeg 
+            "-f", "rawvideo", # tells FFmpeg the input has no container/headers; it’s just raw pixels.
+            "-pix_fmt", "rgb24", # the input pixel format is RGB, 8 bits per channel (3 bytes/pixel).
+            "-video_size", f"{width}x{height}", # the input video resolution is width x height.
+            "-framerate", f"{target_fps}",        # the input frame rate is target_fps frames per second.
+            "-i", "-", # the input comes from standard input (stdin - Python process writes bytes to stdin).
+            "-c:v", "libx264", # use the x264 software encoder (H.264/AVC).
+            "-preset", "ultrafast", # choose the fastest encoding settings (lowest CPU, larger bitrate).
+            "-tune", "zerolatency", # minimize internal buffering/lookahead for low latency streaming.
+            "-pix_fmt", "yuv420p", # set the output pixel format to YUV 4:2:0 (most compatible for H.264).
+            "-g", "120", "-keyint_min", "120", #maximum GOP (group of pictures) length: put an IDR (keyframe) at most every 120 frames. (used for compression)
+            "-sc_threshold", "0", # disable scene-cut keyframes, keeping GOP length constant.
+            "-maxrate", "4M", "-bufsize", "8M", # limit the bitrate to 4Mbps with a 8Mbps buffer (helps with streaming).
+            "-f", "rtsp", "-rtsp_transport", "tcp", # use RTSP protocol over TCP (more reliable than UDP).
+            "rtsp://localhost:8554/mystream" # the RTSP server URL (make sure to match the server configuration).
         ]
         self.target_fps = target_fps
         self.height = height

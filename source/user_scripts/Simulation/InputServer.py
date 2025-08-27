@@ -71,4 +71,4 @@ class InputServer():
         """
         
         import uvicorn
-        uvicorn.run(self.app, host=host, port=port, log_level="info")
+        uvicorn.run(self.app, host=host, port=port, log_level="error")

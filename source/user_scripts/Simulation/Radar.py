@@ -7,7 +7,7 @@ import numpy as np,scipy
 from scipy.spatial.transform import Rotation as R
 from scipy.optimize import brentq
 from scipy.interpolate import RegularGridInterpolator
-
+import Utils
 import yaml
 print("NumPy:", np.__version__, "SciPy:", scipy.__version__)
 
@@ -175,6 +175,9 @@ class Radar:
             self.radar_properties['pd'] = brentq(self.objective_function, a=0.1, b=0.99, args=(self.radar_properties['snr'],num_of_pulses, self.radar_properties['pfa'], k))
 
 
+    
+
+
     def generate_false_alarms(self, num_of_pulses):
         false_alarm = {}
         # theoreticaly we can generate a noise map with the size of the detection map 
@@ -182,24 +185,27 @@ class Radar:
         # so we will generate random indices for the false alarms range, azimuth and velocity cells
         num_of_expected_false_alarms = self.num_of_cells * self.radar_properties['pfa']  # Expected number of false alarms
         num_false_alarms = np.random.poisson(num_of_expected_false_alarms) # Given an average rate of occurrence, how many events are likely to happen in this interval
-
+        velocity,range_detection,azimuth = self.radar_properties['velocity_vector'], self.radar_properties['range_vector'], self.radar_properties['azimuth_vector']
         # get random indices for the false alarms range, azimuth and velocity cells
-        false_alarm['velocity'] = (np.random.uniform(self.radar_properties['velocity_vector'][0], self.radar_properties['velocity_vector'][-1], size=num_false_alarms)).tolist()
-        false_alarm['range'] = (np.random.uniform(self.radar_properties['range_vector'][0], self.radar_properties['range_vector'][-1], size=num_false_alarms)).tolist()
-        false_alarm['azimuth'] = (np.random.uniform(self.radar_properties['azimuth_vector'][0], self.radar_properties['azimuth_vector'][-1], size=num_false_alarms)).tolist()
+        false_alarm['velocity'] = (np.random.uniform(velocity[0], velocity[-1], size=num_false_alarms)).tolist()
+        false_alarm['range'] = (np.random.uniform(range_detection[0], range_detection[-1], size=num_false_alarms)).tolist()
+        false_alarm['azimuth'] = (np.random.uniform(azimuth[0], azimuth[-1], size=num_false_alarms)).tolist()
         return false_alarm
 
 
+
+
+
     def generate_targets(self):
-        target_detection = {}
+        target_detection = {'range': [], 'azimuth': [], 'velocity': []}
          # decide if the target is detected based on the Pd
+        snr,r_resolution, az_resolution, vel_resolution = self.radar_properties['snr'], self.radar_properties['r_resolution'], self.radar_properties['az_resolution'], self.radar_properties['vel_resolution']
         if np.random.binomial(n=1, p=self.radar_properties['pd'], size=1) == 1:
-            target_detection['range'] = (self.target_range + self.generate_noise(self.radar_properties['snr'], self.radar_properties['r_resolution'])).tolist()  # Add noise to the target range
-            target_detection['azimuth'] = (self.az_los + self.generate_noise(self.radar_properties['snr'], self.radar_properties['az_resolution'])).tolist()  # Add noise to the target angle
-            target_detection['velocity'] = (self.radial_velocity + self.generate_noise(self.radar_properties['snr'], self.radar_properties['vel_resolution'])).tolist()  # Add noise to the target velocity
-            return target_detection
-        else:
-            return None
+            target_detection['range'] = [self.target_range + self.generate_noise(snr, r_resolution)]  # Add noise to the target range
+            target_detection['azimuth'] = [self.az_los + self.generate_noise(snr, az_resolution)]  # Add noise to the target angle
+            target_detection['velocity'] = [self.radial_velocity + self.generate_noise(snr, vel_resolution)]  # Add noise to the target velocity
+        return target_detection
+       
 
     def get_detections(self, origin_world_target, target_angle, target_velocity):
         self.calculate_target_in_radar_for(origin_world_target, target_angle, target_velocity)
@@ -209,6 +215,18 @@ class Radar:
         false_alarm = self.generate_false_alarms(num_of_pulses=5)
         target = self.generate_targets()
         return target, false_alarm
+
+
+    def print_detections(self, text_for_image,target, false_alarm, passed_time):
+        for key in ["range", "azimuth", "velocity"]:
+            false_alarm_text = Utils.text_from_data(false_alarm, key, decimals=2)
+            target_text = Utils.text_from_data(target, key, decimals=2)
+            text_for_image[key] = f'{key.capitalize()} : {target_text + false_alarm_text} '
+        text_for_image['Time'] = f'Time : {round(passed_time,2)} s'
+        return '\n'.join(list(text_for_image.values()))
+    
+
+
 
 
 if __name__ == "__main__":

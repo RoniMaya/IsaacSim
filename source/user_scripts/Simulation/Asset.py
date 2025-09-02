@@ -3,7 +3,7 @@ from isaacsim.core.prims import RigidPrim,GeometryPrim
 import numpy as np
 from omni.isaac.core.prims import XFormPrim
 import omni.kit.commands
-from pxr import UsdShade, Gf, UsdGeom
+from pxr import UsdShade, Gf, UsdGeom, Usd, UsdPhysics,PhysxSchema
 import omni.usd
 from omni.isaac.core.utils.torch import quat_rotate
 import warp as wp
@@ -12,14 +12,45 @@ import Utils
 
 class Asset():
     """Represents an asset in the simulation, managing its visual and physical properties."""
-    def __init__(self, prim_path, rigid_prim = True, geometry_prim = False):
+    def __init__(self, prim_path, scale = [1,1,1], rigid_prim = True, geometry_prim = False,usd_load_path = None):
 
-        self.visual = XFormPrim(prim_path)
+        self.visual = XFormPrim(prim_path,scale = scale)
+        self.prim_path = prim_path
+
+        if usd_load_path is not None:
+            self.visual.prim.GetReferences().AddReference(assetPath=usd_load_path)
+            mesh_prims = self.get_mesh_children()
+            [self.apply_collision(prim) for prim in mesh_prims]
+
         self.rigid = RigidPrim(prim_path) if rigid_prim == True else None
         self.geometry = GeometryPrim(prim_path) if geometry_prim == True else None
 
-        self.prim_path = prim_path
+    def get_prim(self):
+        return self.visual.prim.GetPrimAtPath(self.prim_path)
 
+
+
+    def disable_gravity(self):
+        prim = self.get_prim()
+        physxAPI = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
+        physxAPI.CreateDisableGravityAttr(True)
+
+
+    def get_mesh_children(self):
+        get_mesh_children = []
+        prim = self.visual.prim.GetPrimAtPath(self.prim_path)
+        for child_prim in prim.GetChildren():
+            if child_prim.IsA(UsdGeom.Mesh):
+                get_mesh_children.append(child_prim)
+        return get_mesh_children
+
+
+
+    def apply_collision(self, prim):
+
+        UsdPhysics.CollisionAPI.Apply(prim) 
+        self.collision = UsdPhysics.MeshCollisionAPI.Apply(prim)
+        self.collision.GetApproximationAttr().Set("convexDecomposition")
 
     def set_pose(self, translation , orientation = None ):
         """

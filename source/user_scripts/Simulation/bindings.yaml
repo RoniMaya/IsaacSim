@@ -10,15 +10,15 @@ profiles:
     target: camera
     speed:  60.0     # m/s for translate
     frame:  local   # local|world
-    deg_s:  0.5      # deg/s for rotate
+    deg_s:  1      # deg/s for rotate
     zoom_factor:  0.05
 
   cube2: &cube2
     target: cube2
-    speed:  5.0
+    speed:  10.0
     frame:  local
     deg_s:  0.5
-    
+  
 
 devices:
   keyboard1:

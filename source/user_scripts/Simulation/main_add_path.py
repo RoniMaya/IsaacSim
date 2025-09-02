@@ -29,7 +29,10 @@ import Utils
 import os
 import time
 from Radar import Radar
-from pxr import Usd, UsdGeom, UsdPhysics, Gf
+from pxr import Usd, UsdGeom, UsdPhysics, Gf, UsdLux,PhysxSchema, Sdf, Vt
+
+import omni.usd
+
 
 width = 640
 height = 360
@@ -64,8 +67,34 @@ threading.Thread(target=radar_pub.start, daemon=True).start()
 
 
 # Add ogmar--------------------------------------------------------------------------------------------
-# stage_path = os.path.join(os.path.expanduser("~"), "Documents", "cesium", "ogmar_at_origin.usd")
-# open_stage(stage_path)
+stage_path = os.path.join(os.path.expanduser("~"), "Documents", "cesium","textured_model", "z_upv2.usd")
+tree_asset_path = "http://127.0.0.1:8080/omniverse://127.0.0.1/NVIDIA/Assets/Vegetation/Trees/Colorado_Spruce.usd"
+car_asset_path = "http://127.0.0.1:8080/omniverse://127.0.0.1/NVIDIA/Assets/ArchVis/Residential/Food/Candy/GummyBear.usd"
+
+tree_path = "/World/tree"
+car_path = "/World/Gummy_Bear"
+
+
+
+cesium_transformation = Utils.cesium_transformation('/home/ronim/Documents/cesium/ogmar/conf.JSON')
+# find camera position from real world coordinates
+camera_position_dms = {'lon':[35,22,35.57,'E'], 'lat':[30,55,45.43,'N'],'height':-270}
+transformed_vertices = Utils.get_mesh_position_from_dms(camera_position_dms, cesium_transformation)
+
+
+scale_axis = {asset_name:Utils.get_usd_props(asset_path) for asset_name, asset_path in zip([tree_path, car_path], [tree_asset_path, car_asset_path])}
+open_stage(stage_path)
+
+
+
+camera_position_dms1 = {'lon':[35,22,35.79,'E'], 'lat':[30,55,38.57,'N'],'height':7.14}
+camera_position_dms2 = {'lon':[35,22,37.44,'E'], 'lat':[30,55,40.80,'N'],'height':4.11}
+camera_position_dms3 = {'lon':[35,22,35.09,'E'], 'lat':[30,55,42.64,'N'],'height':2.41}
+
+transformed_vertices1 = Utils.get_mesh_position_from_dms(camera_position_dms1, cesium_transformation)
+transformed_vertices2 = Utils.get_mesh_position_from_dms(camera_position_dms2, cesium_transformation)
+transformed_vertices3 = Utils.get_mesh_position_from_dms(camera_position_dms3, cesium_transformation)
+
 
 print("initilizing radar")
 rcs_file_path = '/home/ronim/Documents/radar_sim/radar_rcs_maps/rcs_ball_1m_1.pkl'
@@ -78,40 +107,74 @@ origin_world_radar = np.array([0, 0, 0])
 radar = Radar(rcs_file_path, radar_prop_path, "ball", origin_world_radar, radar_angle, delta_az=delta_az, delta_el=delta_el)
 
 
-world = World()
-enviorment = Enviorment(world)
-world.get_physics_context().set_gravity(0.0)
 
-# default ground plane
-world.scene.add_default_ground_plane()
+world = World()
+world.reset()
+
+enviorment = Enviorment(world, light_path="/World/sky/DomeLight", floor_path="/World/ogmar_at_origin", texture_sky = '/home/ronim/Downloads/sly_chat.png', light_intensity = 1000)
+enviorment.set_dome_direction({'Y':180, 'Z':180})
+
+
+world.get_physics_context().set_gravity(-980)
+
+
+
 
 DynamicCuboid(prim_path="/World/cube", color=np.array([0, 255, 0]))
 cube = Asset("/World/cube")
-
-DynamicCuboid(prim_path="/World/cube2", color=np.array([255, 0, 0]))
-cube2 = Asset("/World/cube2")
-
-VisualCuboid(prim_path="/World/cube_radar", color=np.array([0, 0, 255]))
-cube_radar = Asset("/World/cube_radar", rigid_prim = False, geometry_prim = True)
-
-the_prim_to_collide = cube_radar.visual.prim 
-UsdPhysics.CollisionAPI.Apply(the_prim_to_collide)
-
-
-
-
-cube_radar.set_pose(translation=origin_world_radar, orientation=None)
-cube.set_pose(translation=np.array([0, 0, 50.0]), orientation = None)
-cube2.set_pose(translation=np.array([5, 0, 0.0]), orientation = None)
-
-# attatch a camera to the cube
-camera = CameraClass(prim_path = "/World/cube/camera",orientation = np.array([0, 90, 0]),translation = [0,0,0.0],resolution = (width, height))
-enviorment.add_dome_light(light_path="/dome_light",intensity= 1000)
-
-
-world.reset()
+cube.set_pose(translation=np.array([transformed_vertices[0], transformed_vertices[1], transformed_vertices[2]+10]), orientation = None)
+camera = CameraClass(prim_path = "/World/cube/camera",orientation = np.array([0, 0, 0]),translation = [0,0,0.0],resolution = (width, height))
 camera.camera.initialize()
+
+
+stage = omni.usd.get_context().get_stage()
+
+
+car_prim_path = "/World/Gummy_Bear"
+tree_prim_path = "/World/tree"
+
+
+
+cube2 = Asset(car_prim_path, usd_load_path=car_asset_path, rigid_prim=True, scale=[scale_axis[car_path][0]]*3)
+tree = Asset(tree_prim_path, usd_load_path=tree_asset_path, rigid_prim=False, scale=[scale_axis[tree_path][0]]*3)
+
+
+
 controller = Controller()
+
+
+cube.disable_gravity()
+
+
+
+
+
+# get raycast interface
+raycast = omni.kit.raycast.query.acquire_raycast_query_interface()
+# generate ray array
+ray1 = omni.kit.raycast.query.Ray((-300, 30, 100), (0, 0, -1))
+ray2 = omni.kit.raycast.query.Ray((-300, 30, 100), (0, 0, -1))
+ray_array = [ray1, ray2]
+
+seq_id = raycast.add_raycast_sequence()
+
+
+
+
+for i in range(100):
+    raycast.submit_ray_to_raycast_sequence_array(seq_id, ray_array)
+    hit = raycast.get_latest_result_from_raycast_sequence_array(seq_id)
+    world.step(render=True) # update the world simulation, render the frame if should_render is True
+
+cube2.set_pose(translation=np.array(hit[2][1].hit_position), orientation = None)
+tree.set_pose(translation=np.array(hit[2][0].hit_position), orientation = None)
+# cube.set_pose(translation=np.array((transformed_vertices[0], transformed_vertices[1],10)), orientation = None)
+
+
+
+
+
+
 
 
 frame_count = 0
@@ -121,9 +184,37 @@ should_render= True
 should_detect = True
 next_render,next_detect = time.monotonic(),time.monotonic()
 
+
+
+pts = [Gf.Vec3f(transformed_vertices1), Gf.Vec3f(transformed_vertices2), Gf.Vec3f(transformed_vertices3)]
+
+# path = Sdf.Path("/World/Paths/MainRoute")
+# curves = UsdGeom.BasisCurves.Define(enviorment.stage, path)
+# curves.CreateTypeAttr(UsdGeom.Tokens.cubic)
+# curves.CreateWrapAttr(UsdGeom.Tokens.bspline)
+# curves.CreateWrapAttr(UsdGeom.Tokens.nonperiodic)  # or periodic; bspline/catmullRom also allow pinned
+# curves.CreateCurveVertexCountsAttr(Vt.IntArray([len(pts)]))
+# curves.CreatePointsAttr(Vt.Vec3fArray(pts))
+
+
+
+# # Widths (constant, in cm). 10 cm is clearly visible.
+# pv_api = UsdGeom.PrimvarsAPI(curves)
+# pv_w = pv_api.CreatePrimvar("widths", Sdf.ValueTypeNames.FloatArray, UsdGeom.Tokens.constant)
+# pv_w.Set(Vt.FloatArray([200.0]))
+
+# # Optional: give it a color so it pops
+# pv_c = pv_api.CreatePrimvar("displayColor", Sdf.ValueTypeNames.Color3fArray, UsdGeom.Tokens.constant)
+# pv_c.Set(Vt.Vec3fArray([Gf.Vec3f(1.0, 0.2, 0.2)]))
+
+
+
 while simulation_app.is_running():
     if world.is_playing():
         now = time.monotonic()
+
+
+
         # ------------------ physics update ------------------
 
         # get pressed keys from the input manager and update the physics and camera
@@ -162,17 +253,10 @@ while simulation_app.is_running():
         # ------------------ rendering update ------------------
         world.step(render=should_render) # update the world simulation, render the frame if should_render is True
 
-        target, false_alarm = radar.get_detections(translation, orientation, velocity)
-        detection = {"seq": frame_count, "time": round(time.time(),2)} | target | false_alarm
-        radar_rb.push(detection) # update the radar detection ring buffer 
-
         # if should_render is True, get the camera frame and add it to the queue for processing
         if should_render:
-            passed_time += now - last_time
-            last_time = now
-            if print_detection:
-                all_data_text = radar.print_detections(text_for_image,target, false_alarm, passed_time)
-            frame_rgb_bytes = camera.frame_in_bytes(all_data_text)
+
+            frame_rgb_bytes = camera.frame_in_bytes()
             if frame_rgb_bytes is not None:
                 video_rb.push({"bytes": frame_rgb_bytes, "seq": frame_count})  # Add the frame to the queue for processing
 

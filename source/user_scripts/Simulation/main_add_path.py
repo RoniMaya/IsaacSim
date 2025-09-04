@@ -32,7 +32,7 @@ from Radar import Radar
 from pxr import Usd, UsdGeom, UsdPhysics, Gf, UsdLux,PhysxSchema, Sdf, Vt
 
 import omni.usd
-
+from scipy.interpolate import splprep, splev
 
 width = 640
 height = 360
@@ -69,10 +69,10 @@ threading.Thread(target=radar_pub.start, daemon=True).start()
 # Add ogmar--------------------------------------------------------------------------------------------
 stage_path = os.path.join(os.path.expanduser("~"), "Documents", "cesium","textured_model", "z_upv2.usd")
 tree_asset_path = "http://127.0.0.1:8080/omniverse://127.0.0.1/NVIDIA/Assets/Vegetation/Trees/Colorado_Spruce.usd"
-car_asset_path = "http://127.0.0.1:8080/omniverse://127.0.0.1/NVIDIA/Assets/ArchVis/Residential/Food/Candy/GummyBear.usd"
+car_asset_path = "/home/ronim/Documents/assets/car/car_v7.usd"
 
 tree_path = "/World/tree"
-car_path = "/World/Gummy_Bear"
+car_path = "/World/car"
 
 
 
@@ -86,24 +86,36 @@ scale_axis = {asset_name:Utils.get_usd_props(asset_path) for asset_name, asset_p
 open_stage(stage_path)
 
 
+spline_position_dms = [{'lon':[35,22,22.48,'E'], 'lat':[30,55,36.76,'N'],'height':-293},
+ {'lon':[35,22,24.54,'E'], 'lat':[30,55,37.81,'N'],'height':-295},
+ {'lon':[35,22,26.22,'E'], 'lat':[30,55,38.69,'N'],'height':-296},
+ {'lon':[35,22,27.17,'E'], 'lat':[30,55,39.39,'N'],'height':-306},
+ {'lon':[35,22,28.37,'E'], 'lat':[30,55,40.06,'N'],'height':-306},
+ {'lon':[35,22,29.10,'E'], 'lat':[30,55,40.79,'N'],'height':-307},
+ {'lon':[35,22,29.29,'E'], 'lat':[30,55,41.49,'N'],'height':-307},
+ {'lon':[35,22,29.60,'E'], 'lat':[30,55,42.09,'N'],'height':-308},
+ {'lon':[35,22,30.21,'E'], 'lat':[30,55,42.58,'N'],'height':-308},
+ {'lon':[35,22,30.72,'E'], 'lat':[30,55,43.04,'N'],'height':-303},
+ {'lon':[35,22,32.02,'E'], 'lat':[30,55,43.25,'N'],'height':-303},
+ {'lon':[35,22,33.74,'E'], 'lat':[30,55,43.52,'N'],'height':-308},
+ {'lon':[35,22,34.97,'E'], 'lat':[30,55,43.69,'N'],'height':-305}]
 
-camera_position_dms1 = {'lon':[35,22,35.79,'E'], 'lat':[30,55,38.57,'N'],'height':7.14}
-camera_position_dms2 = {'lon':[35,22,37.44,'E'], 'lat':[30,55,40.80,'N'],'height':4.11}
-camera_position_dms3 = {'lon':[35,22,35.09,'E'], 'lat':[30,55,42.64,'N'],'height':2.41}
+transformed_vertices_spline = [Utils.get_mesh_position_from_dms(camera_position_dms1, cesium_transformation) for camera_position_dms1 in spline_position_dms]
 
-transformed_vertices1 = Utils.get_mesh_position_from_dms(camera_position_dms1, cesium_transformation)
-transformed_vertices2 = Utils.get_mesh_position_from_dms(camera_position_dms2, cesium_transformation)
-transformed_vertices3 = Utils.get_mesh_position_from_dms(camera_position_dms3, cesium_transformation)
+
+waypoints = np.vstack((transformed_vertices_spline))
+
+tck, u = splprep([waypoints[:,0], waypoints[:,1], waypoints[:,2]], s=0, k=3)
 
 
 print("initilizing radar")
-rcs_file_path = '/home/ronim/Documents/radar_sim/radar_rcs_maps/rcs_ball_1m_1.pkl'
+rcs_file_path = '/home/ronim/Documents/radar_sim/radar_rcs_maps/rcs_ford_raptor_1.pkl'
 radar_prop_path = '/home/ronim/Documents/radar_sim/radar_parameters/MAGOS.yaml'
 text_for_image = {}
-delta_az = 80
-delta_el = 30
-radar_angle = [0, 90, 0]               
-origin_world_radar = np.array([0, 0, 0])
+delta_az = 18080
+delta_el = 40
+radar_angle = [0, 120, 100]               
+origin_world_radar = np.array([transformed_vertices[0], transformed_vertices[1], transformed_vertices[2]+10])
 radar = Radar(rcs_file_path, radar_prop_path, "ball", origin_world_radar, radar_angle, delta_az=delta_az, delta_el=delta_el)
 
 
@@ -111,18 +123,18 @@ radar = Radar(rcs_file_path, radar_prop_path, "ball", origin_world_radar, radar_
 world = World()
 world.reset()
 
-enviorment = Enviorment(world, light_path="/World/sky/DomeLight", floor_path="/World/ogmar_at_origin", texture_sky = '/home/ronim/Downloads/sly_chat.png', light_intensity = 1000)
+enviorment = Enviorment(world, light_path="/World/sky/DomeLight", floor_path="/World/z_upv2", texture_sky = '/home/ronim/Downloads/sly_chat.png', light_intensity = 1000)
 enviorment.set_dome_direction({'Y':180, 'Z':180})
 
 
-world.get_physics_context().set_gravity(-980)
+world.get_physics_context().set_gravity(-500.0)
 
 
 
 
 DynamicCuboid(prim_path="/World/cube", color=np.array([0, 255, 0]))
 cube = Asset("/World/cube")
-cube.set_pose(translation=np.array([transformed_vertices[0], transformed_vertices[1], transformed_vertices[2]+10]), orientation = None)
+cube.set_pose(translation=np.array([transformed_vertices[0], transformed_vertices[1], transformed_vertices[2]+10]), orientation = np.array([0,-30,-100]))
 camera = CameraClass(prim_path = "/World/cube/camera",orientation = np.array([0, 0, 0]),translation = [0,0,0.0],resolution = (width, height))
 camera.camera.initialize()
 
@@ -130,51 +142,26 @@ camera.camera.initialize()
 stage = omni.usd.get_context().get_stage()
 
 
-car_prim_path = "/World/Gummy_Bear"
+car_prim_path = "/World/car"
 tree_prim_path = "/World/tree"
 
 
-
-cube2 = Asset(car_prim_path, usd_load_path=car_asset_path, rigid_prim=True, scale=[scale_axis[car_path][0]]*3)
+# cube2 = Asset(car_prim_path)
+cube2 = Asset(car_prim_path, usd_load_path=car_asset_path, rigid_prim=True, scale=[scale_axis[car_path][0]*1.5]*3)
 tree = Asset(tree_prim_path, usd_load_path=tree_asset_path, rigid_prim=False, scale=[scale_axis[tree_path][0]]*3)
 
 
 
-controller = Controller()
-
-
+controller = Controller(imapper.cfg)
 cube.disable_gravity()
 
 
 
 
-
-# get raycast interface
-raycast = omni.kit.raycast.query.acquire_raycast_query_interface()
-# generate ray array
-ray1 = omni.kit.raycast.query.Ray((-300, 30, 100), (0, 0, -1))
-ray2 = omni.kit.raycast.query.Ray((-300, 30, 100), (0, 0, -1))
-ray_array = [ray1, ray2]
-
-seq_id = raycast.add_raycast_sequence()
-
-
-
-
-for i in range(100):
-    raycast.submit_ray_to_raycast_sequence_array(seq_id, ray_array)
-    hit = raycast.get_latest_result_from_raycast_sequence_array(seq_id)
-    world.step(render=True) # update the world simulation, render the frame if should_render is True
-
-cube2.set_pose(translation=np.array(hit[2][1].hit_position), orientation = None)
-tree.set_pose(translation=np.array(hit[2][0].hit_position), orientation = None)
-# cube.set_pose(translation=np.array((transformed_vertices[0], transformed_vertices[1],10)), orientation = None)
-
-
-
-
-
-
+prim = cube2.get_prim()
+mass_kg = 10000
+mapi = UsdPhysics.MassAPI.Apply(prim)
+mapi.GetMassAttr().Set(float(mass_kg))
 
 
 frame_count = 0
@@ -185,8 +172,6 @@ should_detect = True
 next_render,next_detect = time.monotonic(),time.monotonic()
 
 
-
-pts = [Gf.Vec3f(transformed_vertices1), Gf.Vec3f(transformed_vertices2), Gf.Vec3f(transformed_vertices3)]
 
 # path = Sdf.Path("/World/Paths/MainRoute")
 # curves = UsdGeom.BasisCurves.Define(enviorment.stage, path)
@@ -208,13 +193,25 @@ pts = [Gf.Vec3f(transformed_vertices1), Gf.Vec3f(transformed_vertices2), Gf.Vec3
 # pv_c.Set(Vt.Vec3fArray([Gf.Vec3f(1.0, 0.2, 0.2)]))
 
 
+path_parameter = 0.0  # Tracks progress along the spline (from 0.0 to 1.0)
+num_samples = 100
+path_speed = 20.0     # Desired speed along the path in meters/sec
+look_ahead_distance = 5.0 # How far ahead on the path to aim for (in meters)
+spline_points_der = np.array(splev(np.linspace(0, 1, num_samples), tck, der = 1)).T
+spline_points = np.array(splev(np.linspace(0, 1, num_samples), tck)).T
+spline_points = spline_points + np.array([0,0,0.5])
+
+cube2.set_pose(translation=np.array(spline_points[0]), orientation = None)
+
+
+look_ahead_step = look_ahead_distance/np.sum(np.linalg.norm(np.diff(spline_points, axis=0), axis=1))
+
+
+show_pd_real_target = False
 
 while simulation_app.is_running():
     if world.is_playing():
         now = time.monotonic()
-
-
-
         # ------------------ physics update ------------------
 
         # get pressed keys from the input manager and update the physics and camera
@@ -236,14 +233,27 @@ while simulation_app.is_running():
 
         # update the velocity, orientation and zoom of the "camera" cube based on the pressed keys
         translation, orientation = cube2.get_position_and_orientation()
-        cube2_velocity = controller.update_velocity_direction(mapping, 'cube2')
-        cube2_orientation = controller.update_orientation(mapping, 'cube2')
-        #----------------------------------------------------------------------------
+        current_heading_vector = cube2.get_local_orientation(orientation)
+        dist = np.linalg.norm(spline_points - translation, axis=1)
+        closest_index = np.argmin(dist)
+        direction_vector = spline_points_der[closest_index] / np.linalg.norm(spline_points_der[closest_index])
 
-        # set the velocity, orientation and zoom of the "camera" cube
-        cube2.set_angular_velocity_local([cube2_orientation], orientation)
-        cube2.set_velocity_local(cube2_velocity, orientation)
+        desired_angle_rad = np.arctan2(direction_vector[1], direction_vector[0])
+        current_angle_rad = np.arctan2(current_heading_vector[1], current_heading_vector[0])
+
+
+        angular_velocity = controller.angular_velocity_p_controller(desired_angle_rad,current_angle_rad, 'cube2', kp = 150 )
+
+        # Set linear velocity to follow the tangent, and angular velocity to turn
+        cube2.set_velocity_world(direction_vector*controller.cfg['cube2']['speed'])
+        cube2.set_angular_velocity_world(np.array([0, 0, angular_velocity])) # Use world frame for simplicity
+
+        # Get the final velocity for your radar
         velocity = cube2.get_linear_velocity(orientation)
+    
+        if controller.reset_asset(mapping, 'cube2'):
+            cube2.set_pose(translation=np.array(spline_points[0]), orientation = None)
+
         #___________________________________________________________________________________________________________
 
         # check if its time to render / detect the next frame
@@ -252,11 +262,19 @@ while simulation_app.is_running():
 
         # ------------------ rendering update ------------------
         world.step(render=should_render) # update the world simulation, render the frame if should_render is True
+        target, false_alarm = radar.get_detections(translation, orientation, velocity)
+        detection = {"seq": frame_count, "time": round(time.time(),2)} | target | false_alarm
+        radar_rb.push(detection) # update the radar detection ring buffer 
 
         # if should_render is True, get the camera frame and add it to the queue for processing
         if should_render:
-
-            frame_rgb_bytes = camera.frame_in_bytes()
+            passed_time += now - last_time
+            last_time = now
+            if print_detection:
+                all_data_text = radar.print_detections(text_for_image,target, false_alarm, passed_time)
+                if show_pd_real_target:
+                    all_data_text = f"{all_data_text} \n real target{round(radar.target_range,2)} \n pd {round(radar.radar_properties['pd'],2)}"
+            frame_rgb_bytes = camera.frame_in_bytes(all_data_text)
             if frame_rgb_bytes is not None:
                 video_rb.push({"bytes": frame_rgb_bytes, "seq": frame_count})  # Add the frame to the queue for processing
 

@@ -9,6 +9,7 @@ from omni.isaac.core.utils.torch import quat_rotate
 import warp as wp
 import numpy as np
 import Utils
+from scipy.spatial.transform import Rotation as R
 
 class Asset():
     """Represents an asset in the simulation, managing its visual and physical properties."""
@@ -25,8 +26,10 @@ class Asset():
         self.rigid = RigidPrim(prim_path) if rigid_prim == True else None
         self.geometry = GeometryPrim(prim_path) if geometry_prim == True else None
 
-    def get_prim(self):
-        return self.visual.prim.GetPrimAtPath(self.prim_path)
+    def get_prim(self, prim_path = None):
+        if prim_path == None:
+           prim_path = self.prim_path
+        return self.visual.prim.GetPrimAtPath(prim_path)
 
 
 
@@ -39,7 +42,8 @@ class Asset():
     def get_mesh_children(self):
         get_mesh_children = []
         prim = self.visual.prim.GetPrimAtPath(self.prim_path)
-        for child_prim in prim.GetChildren():
+        all_prims = Usd.PrimRange(prim)
+        for child_prim in all_prims:
             if child_prim.IsA(UsdGeom.Mesh):
                 get_mesh_children.append(child_prim)
         return get_mesh_children
@@ -60,9 +64,9 @@ class Asset():
             orientation (np.ndarray, optional): A numpy array specifying the new orientation as a quaternion [x, y, z, w].
                 If None, the orientation remains unchanged. Defaults to None.
         """
-
+        if orientation is not None:
+            orientation=Utils.euler_to_quaternion(orientation)
         self.visual.set_local_pose(translation=translation, orientation=orientation)
- 
 
     def update_prim_scale(self, scale):
         """
@@ -102,16 +106,40 @@ class Asset():
         translation, orientation = self.rigid.get_world_poses()
         return translation[0], orientation[0]
 
-    def get_velocity(self):
-        """
-        Returns the current linear velocity of the asset.
-        Returns:
-            np.ndarray: A numpy array representing the current linear velocity [vx, vy, vz] of the asset.
-        """
+    # def get_velocity(self):
+    #     """
+    #     Returns the current linear velocity of the asset.
+    #     Returns:
+    #         np.ndarray: A numpy array representing the current linear velocity [vx, vy, vz] of the asset.
+    #     """
         
+    #     return self.rigid.get_linear_velocities()[0]
+
+    def get_linear_velocity(self, orientation):
+
         return self.rigid.get_linear_velocities()[0]
 
-    def get_linear_velocity(self,orientation):
+    
+    def get_local_orientation(self, orientation):
+        orientation_quat_xyzw = orientation[[1, 2, 3, 0]]
+        current_rot = R.from_quat(orientation_quat_xyzw)
+        # Get the direction the car's front is pointing
+        current_heading_vector = current_rot.apply([1, 0, 0])
+        return current_heading_vector
 
-        return self.rigid.get_linear_velocities()[0]
-         
+    def set_velocity_world(self, world_velocity):
+        """
+        Sets the linear velocity of the asset in world coordinates.
+        Args:
+            velocity (np.ndarray): A numpy array specifying the velocity vector [vx, vy, vz] in world coordinates.
+        """
+        self.rigid.set_linear_velocities([world_velocity])
+
+    def set_angular_velocity_world(self, angular_velocity):
+        """
+        Sets the angular velocity of the asset in world coordinates.
+        Args:
+            angular_velocity (np.ndarray): A numpy array specifying the angular velocity vector [wx, wy, wz] in world coordinates.
+        """
+        self.rigid.set_angular_velocities([angular_velocity])
+

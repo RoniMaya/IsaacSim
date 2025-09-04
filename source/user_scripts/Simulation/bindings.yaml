@@ -15,9 +15,9 @@ profiles:
 
   cube2: &cube2
     target: cube2
-    speed:  10.0
+    speed:  20.0
     frame:  local
-    deg_s:  0.5
+    deg_s:  1
   
 
 devices:
@@ -35,20 +35,20 @@ devices:
           "8": { <<: *camera, axis: "-PITCH" , key_stat:"held"}
           "7": { <<: *camera, axis: "+ROLL" , key_stat:"held"}
           "9": { <<: *camera, axis: "-ROLL" , key_stat:"held"}
-          "R": { <<: *camera, axis: "+ZOOM" , key_stat:"held"}
-          "F": { <<: *camera, axis: "-ZOOM" , key_stat:"held"}
+          "-": { <<: *camera, axis: "+ZOOM" , key_stat:"held"}
+          "+": { <<: *camera, axis: "-ZOOM" , key_stat:"held"}
           
           
           # --- cube2 movement (T/G forward/back, 7/9 yaw) ---
-          Y: { <<: *cube2, axis: "+Z" , key_stat:"held"}
-          I: { <<: *cube2, axis: "-Z" , key_stat:"held"}
-          K: { <<: *cube2, axis: "-Y" , key_stat:"held"}
-          H: { <<: *cube2, axis: "+Y" , key_stat:"held"}
-          J: { <<: *cube2, axis: "-X" , key_stat:"held"}
+          # U: { <<: *cube2, axis: "+Z" , key_stat:"held"}
+          # O: { <<: *cube2, axis: "-Z" , key_stat:"held"}
+          # L: { <<: *cube2, axis: "+Y" , key_stat:"held"}
+          # J: { <<: *cube2, axis: "-Y" , key_stat:"held"}
           U: { <<: *cube2, axis: "+X" , key_stat:"held"}
-          "M": { <<: *cube2, axis: "+YAW" , key_stat:"held"}
-          "N": { <<: *cube2, axis: "-YAW" , key_stat:"held"}
-
+          J: { <<: *cube2, axis: "-X" , key_stat:"held"}
+          "H": { <<: *cube2, axis: "+YAW" , key_stat:"held"}
+          "K": { <<: *cube2, axis: "-YAW" , key_stat:"held"}
+          "X": { <<: *cube2, reset: "RESET" , key_stat:"held"}
 
 
 

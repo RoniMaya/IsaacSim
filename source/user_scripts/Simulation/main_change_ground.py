@@ -186,7 +186,7 @@ next_render,next_detect = time.monotonic(),time.monotonic()
 
 
 
-pts = [Gf.Vec3f(transformed_vertices1), Gf.Vec3f(transformed_vertices2), Gf.Vec3f(transformed_vertices3)]
+pts = [Gf.Vec3f(0,0,10), Gf.Vec3f(100,150,10), Gf.Vec3f(200,50,10)]
 
 # path = Sdf.Path("/World/Paths/MainRoute")
 # curves = UsdGeom.BasisCurves.Define(enviorment.stage, path)

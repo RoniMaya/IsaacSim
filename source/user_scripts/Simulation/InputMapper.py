@@ -76,7 +76,27 @@ class InputMapper():
                 'deg_s': deg_s,
                 'zoom': 1,
                 'local_move': np.array([0,0,0]),
-                'rot_deg': np.array([0,0,0])}
+                'rot_deg': np.array([0,0,0]), 
+                'reset': 0}
+
+    def reset(self, reset):
+        return {
+            "RESET": 1,
+        }.get(reset, 0)
+
+
+    def apply_axis_updates(self, mapping, axis_value):
+        if 'local_move' in mapping:
+            mapping['local_move'] += self.axis_to_vec(axis_value)
+        if 'rot_deg' in mapping:
+            mapping['rot_deg'] += self.yaw_pitch_roll_to_vec(axis_value)
+
+        return mapping
+
+    def apply_zoom_updates(self, mapping, zoom_value, zoom_factor):
+        if 'zoom' in mapping:
+            mapping['zoom'] +=self.zoom_factor(zoom_value, zoom_factor)
+        return mapping
 
     def add_mapping_per_device(self, device, keys):
         """
@@ -85,17 +105,26 @@ class InputMapper():
             device (str): The input device identifier.
             keys (set): Set of currently pressed keys for the device.
         """
-        for key in keys:
-            if key not in self.cfg['devices'][device]:
+        input_device = self.cfg['devices'][device]
+        for key in keys: # check all pressed keys
+            if key not in input_device: # if the key is not mapped for this device continue
                 continue
-            pressed_key = self.cfg['devices'][device][key]
-            if pressed_key['target'] not in self.mapping:
-                self.mapping[pressed_key['target']] = self.initialize_mapping(speed=pressed_key['speed'],deg_s=pressed_key['deg_s'])
-            axis_value = self.cfg['devices'][device][key]['axis']
-            self.mapping[pressed_key['target']]['local_move']+=self.axis_to_vec(axis_value)
-            self.mapping[pressed_key['target']]['rot_deg']+=self.yaw_pitch_roll_to_vec(axis_value)
-            if 'zoom_factor' in self.cfg['profiles'][pressed_key['target']]:
-                self.mapping[pressed_key['target']]['zoom']+=self.zoom_factor(axis_value, self.cfg['profiles'][pressed_key['target']]['zoom_factor'])
+
+            pressed_key = input_device[key] # get the pressed key
+            asset = pressed_key['target'] # get the target asset
+
+            if asset not in self.mapping:
+                self.mapping[asset] = self.initialize_mapping(speed=pressed_key['speed'],deg_s=pressed_key['deg_s'])
+            
+            asset_mapping = self.mapping[asset]
+            asset_profile = self.cfg['profiles'][asset]
+
+            if 'axis' in pressed_key:
+                asset_mapping = self.apply_axis_updates(asset_mapping, pressed_key['axis'])
+            if 'zoom_factor' in asset_profile:
+                asset_mapping = self.apply_zoom_updates(asset_mapping, pressed_key['axis'], asset_profile['zoom_factor'])  
+            if 'reset' in pressed_key:
+                asset_mapping['reset'] = self.reset(pressed_key['reset'])
 
 
     def calculate_mapping(self, pressed: dict) -> dict:
@@ -110,10 +139,8 @@ class InputMapper():
         """
         self.mapping = {}
         for device, keys in pressed.items():
-            try:
-                self.add_mapping_per_device( device, keys)
-            except:
-                wakk = 2
+            self.add_mapping_per_device( device, keys)
+
         return self.mapping
 
 
@@ -123,7 +150,7 @@ if __name__ == "__main__":
 
     im = InputMapper(cfg_file)
     pressed = {
-        "keyboard1": {"W","T","R","4","G","+"},
+        "keyboard1": {"W","T","R","4","G","+","X"},
         "keyboard2": {"8","4","6","9"}
     }
     mapping = im.calculate_mapping(pressed)

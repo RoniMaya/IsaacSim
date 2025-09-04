@@ -128,7 +128,7 @@ class CameraClass():
                 frame_rgba = Image.fromarray(frame_rgba)
                 I1 = ImageDraw.Draw(frame_rgba)
                 font = ImageFont.truetype("DejaVuSansMono.ttf", 18)
-                I1.text((28, 36), text_to_add, fill=(255, 0, 0), font = font)
+                I1.text((28, 36), text_to_add, fill=(255, 255, 255), font = font)
                 frame_rgba = np.array(frame_rgba)
             return frame_rgba[:, :, :3].tobytes()
         

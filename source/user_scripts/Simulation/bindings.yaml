@@ -13,13 +13,18 @@ profiles:
     deg_s:  1      # deg/s for rotate
     zoom_factor:  0.05
 
-  cube2: &cube2
-    target: cube2
-    speed:  20.0
+  car1: &car1
+    target: car1
+    speed:  30.0
+    frame:  local
+    deg_s:  1
+
+  car2: &car2
+    target: car2
+    speed:  24.0
     frame:  local
     deg_s:  1
   
-
 devices:
   keyboard1:
           # --- cube1 movement (WASD + R/F vertical, 4/6 yaw) ---
@@ -44,13 +49,13 @@ devices:
           # O: { <<: *cube2, axis: "-Z" , key_stat:"held"}
           # L: { <<: *cube2, axis: "+Y" , key_stat:"held"}
           # J: { <<: *cube2, axis: "-Y" , key_stat:"held"}
-          U: { <<: *cube2, axis: "+X" , key_stat:"held"}
-          J: { <<: *cube2, axis: "-X" , key_stat:"held"}
-          "H": { <<: *cube2, axis: "+YAW" , key_stat:"held"}
-          "K": { <<: *cube2, axis: "-YAW" , key_stat:"held"}
-          "X": { <<: *cube2, reset: "RESET" , key_stat:"held"}
+          U: { <<: *car2, axis: "+X" , key_stat:"held"}
+          J: { <<: *car2, axis: "-X" , key_stat:"held"}
+          "H": { <<: *car2, axis: "+YAW" , key_stat:"held"}
+          "K": { <<: *car2, axis: "-YAW" , key_stat:"held"}
+          "X": { <<: *car1, reset: "RESET" , key_stat:"held"}
 
 
 
   keyboard2:
-          P: { <<: *cube2, axis: "+PITCH" , key_stat:"held"}
+          P: { <<: *car1, axis: "+PITCH" , key_stat:"held"}

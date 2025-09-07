@@ -19,6 +19,7 @@ from omni.isaac.core import World
 from omni.isaac.core.objects import DynamicCuboid
 from omni.isaac.sensor import Camera
 import omni.kit.commands
+import Utils
 
 
 
@@ -120,7 +121,7 @@ class CameraClass():
         return self.camera.get_rgba()
 
 
-    def frame_in_bytes(self,text_to_add = None):
+    def frame_in_bytes(self,text_to_add = None,az_deg=None, r_m=None,polar_plot = None):
         frame_rgba = self.get_frame()
         if frame_rgba is not None and frame_rgba.size > 0:
 
@@ -130,6 +131,50 @@ class CameraClass():
                 font = ImageFont.truetype("DejaVuSansMono.ttf", 18)
                 I1.text((28, 36), text_to_add, fill=(255, 255, 255), font = font)
                 frame_rgba = np.array(frame_rgba)
+
+        # Add the polar inset if data provided
+            if az_deg is not None and r_m is not None:
+                frame_rgba = Image.fromarray(frame_rgba)
+                rgba = polar_plot.update(az_deg, r_m)
+                inset = Image.fromarray(rgba, mode="RGBA")
+                frame_rgba.paste(inset, (20,20), inset)
+                frame_rgba = np.array(frame_rgba)
             return frame_rgba[:, :, :3].tobytes()
+        
+
+
+
+
+
+
+
+
+        # # Add the polar inset if data provided
+        #     if az_deg is not None and r_m is not None:
+        #         # frame_rgba = Image.fromarray(frame_rgba)
+
+        #         # convert image into grayscale
+        #         gray = cv2.cvtColor(frame_rgba, cv2.COLOR_BGR2GRAY)
+
+        #         #initialize the colormap
+        #         colormap = mpl.cm.jet
+
+        #         #add a normalization
+        #         cNorm = mpl.colors.Normalize(vmin=0, vmax=255)
+
+        #         #init the mapping
+        #         scalarMap = mtpltcm.ScalarMappable(norm=cNorm, cmap=colormap)
+            
+                
+        #         colors = scalarMap.to_rgba(gray)
+        #         rgba = polar_plot.update(az_deg, r_m)
+        #         frame_rgba = Image.fromarray((colors*255).astype(np.uint8))
+
+        #         inset = Image.fromarray(rgba, mode="RGBA")
+        #         frame_rgba.paste(inset, (20,20), inset)
+        #         frame_rgba = np.array(frame_rgba)
+        #     return frame_rgba[:, :, :3].tobytes()
+        
+        
         
         

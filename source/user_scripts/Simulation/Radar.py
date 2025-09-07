@@ -9,6 +9,7 @@ from scipy.optimize import brentq
 from scipy.interpolate import RegularGridInterpolator
 import Utils
 import yaml
+import random
 print("NumPy:", np.__version__, "SciPy:", scipy.__version__)
 
 
@@ -190,6 +191,7 @@ class Radar:
         false_alarm['velocity'] = (np.random.uniform(velocity[0], velocity[-1], size=num_false_alarms)).tolist()
         false_alarm['range'] = (np.random.uniform(range_detection[0], range_detection[-1], size=num_false_alarms)).tolist()
         false_alarm['azimuth'] = (np.random.uniform(azimuth[0], azimuth[-1], size=num_false_alarms)).tolist()
+        false_alarm['snr'] = (np.random.uniform(0, self.radar_properties['snr'], size=num_false_alarms)).tolist()
         return false_alarm
 
 
@@ -204,6 +206,7 @@ class Radar:
             target_detection['range'] = [self.target_range + self.generate_noise(snr, r_resolution)]  # Add noise to the target range
             target_detection['azimuth'] = [self.az_los + self.generate_noise(snr, az_resolution)]  # Add noise to the target angle
             target_detection['velocity'] = [self.radial_velocity + self.generate_noise(snr, vel_resolution)]  # Add noise to the target velocity
+            target_detection['snr'] = [snr]
         return target_detection
        
 
@@ -221,10 +224,29 @@ class Radar:
         for key in ["range", "azimuth", "velocity"]:
             false_alarm_text = Utils.text_from_data(false_alarm, key, decimals=2)
             target_text = Utils.text_from_data(target, key, decimals=2)
-            text_for_image[key] = f'{key.capitalize()} : {target_text + false_alarm_text} '
+            text_for_image[key] = f'{key.capitalize()} : {target_text + false_alarm_text}'
         text_for_image['Time'] = f'Time : {round(passed_time,2)} s'
         return '\n'.join(list(text_for_image.values()))
     
+
+    def check_if_targets_in_same_bin(self, targets_array, resolution_name):
+        dict_bins = {}
+        no_bins = []
+        for target in targets_array:
+            if resolution_name not in target or len(target[resolution_name])==0:
+                no_bins.append(target)
+            else:
+                bin_resolution = np.argmin(np.abs(self.radar_properties[f"{resolution_name}_vector"] - target[resolution_name]))
+                if bin_resolution not in dict_bins:
+                    dict_bins[bin_resolution] = [target]
+                else:
+                    dict_bins[bin_resolution].append(target)
+
+
+
+        winners = [random.choice(cand_list) for cand_list in dict_bins.values()]
+        return no_bins + winners
+
 
 
 

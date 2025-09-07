@@ -143,3 +143,17 @@ class Asset():
         """
         self.rigid.set_angular_velocities([angular_velocity])
 
+
+
+    def set_pose_world(self, translation , orientation = None ):
+        """
+        Sets the pose of the asset's visual representation.
+        Args:
+            translation (np.ndarray): A numpy array specifying the new position for the primitive in the form [x, y, z].
+            orientation (np.ndarray, optional): A numpy array specifying the new orientation as a quaternion [x, y, z, w].
+                If None, the orientation remains unchanged. Defaults to None.
+        """
+        if orientation is not None:
+            orientation=Utils.euler_to_quaternion(orientation)
+        self.visual.set_world_pose(position=translation, orientation=orientation)
+

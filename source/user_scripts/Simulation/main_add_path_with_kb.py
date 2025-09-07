@@ -38,7 +38,7 @@ width = 640
 height = 360
 physics_frequency = 120  # Hz
 rendering_frequency = 60  # Frames per second
-detection_frequency = 1  # Hz
+detection_frequency = 2  # Hz
 
 render_every_n_frame = int(physics_frequency / rendering_frequency)
 asset_speed = 80  # Speed of the asset in the simulation
@@ -69,7 +69,7 @@ threading.Thread(target=radar_pub.start, daemon=True).start()
 # Add ogmar--------------------------------------------------------------------------------------------
 stage_path = os.path.join(os.path.expanduser("~"), "Documents", "cesium","textured_model", "z_upv2.usd")
 tree_asset_path = "http://127.0.0.1:8080/omniverse://127.0.0.1/NVIDIA/Assets/Vegetation/Trees/Colorado_Spruce.usd"
-car_asset_path = "/home/ronim/Documents/assets/car/car_v3.usd"
+car_asset_path = "/home/ronim/Documents/assets/car/car_v7.usd"
 
 tree_path = "/World/tree"
 car_path = "/World/car"
@@ -141,7 +141,7 @@ tree = Asset(tree_prim_path, usd_load_path=tree_asset_path, rigid_prim=False, sc
 
 
 
-controller = Controller()
+controller = Controller(imapper.cfg)
 
 
 cube.disable_gravity()

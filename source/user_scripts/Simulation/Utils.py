@@ -4,6 +4,10 @@ import numpy as np
 from pxr import Usd, UsdGeom, Sdf, Gf
 import math
 import json
+from scipy.interpolate import splprep, splev
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from PIL import Image, ImageDraw, ImageFont
 
 
 
@@ -136,6 +140,75 @@ def get_mesh_position_from_dms(camera_position_dms, transformation):
     transformed_vertices = np.dot(np.linalg.inv(transformation[:, :]), np.array([x, y, z, 1])).T
     C = rot_x(+90) 
     return np.dot(np.linalg.inv(C), transformed_vertices)
+
+
+def generate_spline_path(spline_position_dms, cesium_transformation, spline_param = 3, num_samples = 500, add_z = 0):
+    waypoints = np.vstack([get_mesh_position_from_dms(dms_position, cesium_transformation) for dms_position in spline_position_dms])
+    tck, u = splprep([waypoints[:,0], waypoints[:,1], waypoints[:,2]], s=0, k=spline_param)
+
+    spline_points_der = np.array(splev(np.linspace(0, 1, num_samples), tck, der = 1)).T
+    spline_points = np.array(splev(np.linspace(0, 1, num_samples), tck)).T + np.array([0,0,add_z])
+    ini_dir = (spline_points_der[1] - spline_points_der[0])/np.linalg.norm(spline_points_der[1] - spline_points_der[0])
+    euler_initial_angles = np.arctan2(ini_dir[0], ini_dir[1])*180/np.pi
+    return spline_points,spline_points_der, euler_initial_angles
+
+
+
+
+
+
+def _make_polar_rgba(az_deg, r_m, snr=None, r_max=None, size=(240, 240)):
+    """
+    Return an RGBA numpy array of a polar plot (theta=azimuth, r=range).
+    - az_deg, r_m: 1D arrays
+    - snr: optional 1D array for color mapping
+    - r_max: optional float to fix radial limit
+    - size: (width, height) in pixels
+    """
+    w, h = size
+    dpi = 100
+    fig = Figure(figsize=(w/dpi, h/dpi), dpi=dpi)
+    fig.patch.set_alpha(0)  # transparent figure
+    ax = fig.add_subplot(111, projection='polar')
+    ax.set_facecolor('none')
+
+    theta = np.deg2rad(np.asarray(az_deg))
+    r = np.asarray(r_m)
+
+    if snr is None:
+        ax.scatter(theta, r, s=10, alpha=0.95, color = 'red')  # default color
+    else:
+        sc = ax.scatter(theta, r, c=np.asarray(snr), s=12, alpha=0.95, cmap='viridis')
+        # Optional: a colorbar would take space; usually skip for an inset
+
+    if r_max is not None:
+        ax.set_rlim(0, r_max)
+
+    # Clean up for inset look
+    ax.grid(True, alpha=0.3)
+    ax.set_xticklabels([])         # hide az labels
+    ax.set_yticklabels([])         # hide r labels
+    ax.spines['polar'].set_visible(False)
+
+    canvas = FigureCanvas(fig)
+    canvas.draw()
+    rgba = np.asarray(canvas.buffer_rgba())  # HxWx4 (RGBA)
+    return rgba
+
+
+
+
+def overlay_polar_inset(frame_rgba, az_deg, r_m, snr=None, r_max=300, pos=(20, 20), size=(240, 240)):
+    """
+    Paste the polar plot onto frame_rgba at pixel 'pos' (x,y).
+    Returns a new numpy array (same shape as frame_rgba).
+    """
+    plot_rgba = _make_polar_rgba(az_deg, r_m, snr=snr, r_max=r_max, size=size)
+    base = Image.fromarray(frame_rgba) if not isinstance(frame_rgba, Image.Image) else frame_rgba
+    inset = Image.fromarray(plot_rgba, mode="RGBA")
+    base.paste(inset, pos, mask=inset)  # alpha composite
+    return np.asarray(base)
+
 
 
 

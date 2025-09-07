@@ -62,3 +62,26 @@ class Controller():
         return angle_error_rad*self.cfg[asset_name]['deg_s']*np.pi/180*kp # Use world
 
 
+
+    def angular_velocity_pd_controller(self,desired_angle_rad,current_angle_rad,angular_velocity, asset_name, kp = 1, kd = 0.1 ):
+        """ Proportional-Derivative controller for angular velocity to reach a desired angle.  """
+        angle_error_rad = (desired_angle_rad - current_angle_rad + np.pi) % (2 * np.pi) - np.pi
+        omega_cmd = kp * angle_error_rad - kd * angular_velocity
+        max_rate = np.deg2rad(self.cfg[asset_name]['deg_s'])
+
+        return np.clip(omega_cmd, -max_rate, max_rate)
+
+
+    def get_velocity_parameters_spline_path(self,translation,current_heading_vector,spline_points,spline_points_der,asset_name, kp = 200):
+        """ Get velocity parameters to follow a spline path. """
+
+        
+        dist = np.linalg.norm(spline_points - translation, axis=1)
+        idx = np.argpartition(dist, 2)[1]  # get the index of the second closest point
+        # closest_index = np.argmin(dist)
+        direction_vector = spline_points_der[idx] / np.linalg.norm(spline_points_der[idx])
+        desired_angle_rad = np.arctan2(direction_vector[1], direction_vector[0])
+        current_angle_rad = np.arctan2(current_heading_vector[1], current_heading_vector[0])
+        angular_velocity = self.angular_velocity_p_controller(desired_angle_rad,current_angle_rad, asset_name, kp = kp)
+        return angular_velocity, direction_vector*self.cfg[asset_name]['speed']
+

@@ -15,9 +15,10 @@ print("NumPy:", np.__version__, "SciPy:", scipy.__version__)
 
 class Radar:
 
-    def __init__(self, rcs_file_path, radar_prop_path, target_name, radar_origin, radar_angle=np.array([0, 90, 0]), delta_az=80.0, delta_el=40.0, det_per_sec = 1):
+    def __init__(self, rcs_file_path, radar_prop_path, radar_origin, 
+                 radar_angle=np.array([0, 90, 0]), delta_az=80.0, delta_el=40.0, det_per_sec = 1, lat_lon_pos = None):
         self.rcs_file_path = rcs_file_path
-        self.target_name = target_name
+        self.radar_id = "radar"
         self.radar_origin = radar_origin # defines origin of radar in world FoR
         self.radar_angle = radar_angle # defines rotation of radar
         self.radar_rotation = self.define_rotation(radar_angle) # defines rotation of radar to world FoR
@@ -29,6 +30,9 @@ class Radar:
         self.load_radar_properties(radar_prop_path)
         self.det_per_sec = det_per_sec
         self.time_between_detections = 1.0 / det_per_sec
+
+        if lat_lon_pos:
+            self.lat0_deg, self.lon0_deg, _ = Utils.dms_to_dd(lat_lon_pos['lat']), Utils.dms_to_dd(lat_lon_pos['lon']), lat_lon_pos['height']
 
     def sample_from_rcs(self):
         pt = np.array([self.total_az, self.total_el])
@@ -70,10 +74,11 @@ class Radar:
         self.az_los, self.el_los = self.cartesian_to_spherical_radar_coordinates(los_radar) # azimuth and elevation of LOS in radar FoR
         
         
-        target_axes_world = target_rotation.apply(np.eye(3)) # target axes in world FoR
-        target_in_radar = self.radar_rotation.inv().apply(target_axes_world) # transform target to radar FoR
+        self.target_axes_world = target_rotation.apply(np.eye(3)) # target axes in world FoR
+        target_in_radar = self.radar_rotation.inv().apply(self.target_axes_world) # transform target to radar FoR
         target_velocity_radar = self.radar_rotation.inv().apply(target_velocity) # transform target velocity to radar FoR
         az_target, elev_target = self.cartesian_to_spherical_radar_coordinates(target_in_radar[0,:]) # azimuth and elevation of target in radar FoR
+        self.radar_target_fwd = target_in_radar[0,:]
         radial_velocity = np.dot(target_velocity_radar, u_los)
         self.total_az   = self.wrap180(-az_target + self.az_los)
         self.total_el   = -elev_target + self.el_los
@@ -81,11 +86,12 @@ class Radar:
 
 
 
-    def cartesian_to_spherical_radar_coordinates(self, v):  # radar forward = +Z
+    def cartesian_to_spherical_radar_coordinates(self, v, coordinates = 'radar'):  # radar forward = +Z
         x, y, z = v
-        az = np.degrees(np.arctan2(y, z))
+        az = np.degrees(np.arctan2(y, z)) if coordinates == 'radar' else np.degrees(np.arctan2(y,x))
         elevation = np.degrees(np.arctan2(x, np.hypot(z, y)))
         return self.wrap180(az), elevation
+
 
     def spherical_to_cartesian_radar_coordinates(self, azimuth, elevation, radius=1):
         radius = 1  # radius of the sphere
@@ -131,7 +137,20 @@ class Radar:
         self.radar_properties['snr'] = K * self.rcs_swerling / (self.target_range**4)
         self.radar_properties['K'] = K
 
+    def azimuth_range_to_world(self, range_target, azimuth, elevation = 0):
+        rad_target_vec = self.spherical_to_cartesian_radar_coordinates(azimuth, elevation, radius=range_target)
+        rad_target_world = self.radar_rotation.apply(rad_target_vec)
+        dist_east_north_up = range_target * rad_target_world
+            # Convert meters to lat/lon deltas (simple local approximation)
+        meters_per_deg_lat = 111132.0
+        meters_per_deg_lon = 111320.0 * np.cos(np.deg2rad(self.lat0_deg))
 
+
+        lat_deg = self.lat0_deg + dist_east_north_up[1] / meters_per_deg_lat
+        lon_deg = self.lon0_deg + dist_east_north_up[0] / meters_per_deg_lon
+        az_world,el_world = self.cartesian_to_spherical_radar_coordinates(rad_target_world, coordinates = 'world')
+
+        return lat_deg, lon_deg,az_world
 
     def calculate_snr_shnidman(self, pd, num_of_pulses,pfa , k ):
         """Calculates the required SNR using Shnidman's equation."""
@@ -179,7 +198,7 @@ class Radar:
     
 
 
-    def generate_false_alarms(self, num_of_pulses):
+    def generate_false_alarms(self, num_of_pulses, target_id):
         false_alarm = {}
         # theoreticaly we can generate a noise map with the size of the detection map 
         # and use the TH to get the false identification but its computationaly intensive
@@ -192,14 +211,18 @@ class Radar:
         false_alarm['range'] = (np.random.uniform(range_detection[0], range_detection[-1], size=num_false_alarms)).tolist()
         false_alarm['azimuth'] = (np.random.uniform(azimuth[0], azimuth[-1], size=num_false_alarms)).tolist()
         false_alarm['snr'] = (np.random.uniform(0, self.radar_properties['snr'], size=num_false_alarms)).tolist()
+        false_alarm['id'] = [f'false_alarm_{idx}_{target_id}' for idx in range(num_false_alarms)]
+        false_alarm['lon'] = []
+        false_alarm['lat'] = []
+        false_alarm['az_world'] = []
         return false_alarm
 
 
 
 
 
-    def generate_targets(self):
-        target_detection = {'range': [], 'azimuth': [], 'velocity': []}
+    def generate_targets(self,target_id):
+        target_detection = {'range': [], 'azimuth': [], 'velocity': [],'lon':[],'lat':[],'id':[],'az_world':[]}
          # decide if the target is detected based on the Pd
         snr,r_resolution, az_resolution, vel_resolution = self.radar_properties['snr'], self.radar_properties['r_resolution'], self.radar_properties['az_resolution'], self.radar_properties['vel_resolution']
         if np.random.binomial(n=1, p=self.radar_properties['pd'], size=1) == 1:
@@ -207,18 +230,28 @@ class Radar:
             target_detection['azimuth'] = [self.az_los + self.generate_noise(snr, az_resolution)]  # Add noise to the target angle
             target_detection['velocity'] = [self.radial_velocity + self.generate_noise(snr, vel_resolution)]  # Add noise to the target velocity
             target_detection['snr'] = [snr]
+            target_detection['id'] = [target_id]
         return target_detection
        
 
-    def get_detections(self, origin_world_target, target_angle, target_velocity):
+    def get_detections(self, origin_world_target, target_angle, target_velocity,target_id):
         self.calculate_target_in_radar_for(origin_world_target, target_angle, target_velocity)
         self.calculate_rcs()
         self.snr_linear()
         self.calculate_pd( num_of_pulses=5, k=1)
-        false_alarm = self.generate_false_alarms(num_of_pulses=5)
-        target = self.generate_targets()
+        false_alarm = self.generate_false_alarms(5, target_id)
+        target = self.generate_targets(target_id)
+        self.calc_world_r_az(target)
+        self.calc_world_r_az(false_alarm)
         return target, false_alarm
+    
 
+    def calc_world_r_az(self, target):
+        for r,az in zip(target['range'], target['azimuth']):
+            lat, lon, az_world = self.azimuth_range_to_world(r, az, elevation=0) 
+            target['lat'].append(lat)
+            target['lon'].append(lon)
+            target['az_world'].append(az_world)
 
     def print_detections(self, text_for_image,target, false_alarm, passed_time):
         for key in ["range", "azimuth", "velocity"]:

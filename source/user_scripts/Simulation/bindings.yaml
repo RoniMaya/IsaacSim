@@ -13,6 +13,12 @@ profiles:
     deg_s:  1      # deg/s for rotate
     zoom_factor:  0.05
 
+  cam_poll: &cam_poll
+    target: cam_poll
+    speed:  0.0
+    frame:  local
+    deg_s:  1
+    
   car1: &car1
     target: car1
     speed:  30.0

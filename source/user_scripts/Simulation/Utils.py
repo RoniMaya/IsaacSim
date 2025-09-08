@@ -110,6 +110,17 @@ def dms_to_dd(dmsd):
     return dd
 
 
+
+def dd_to_dms(dd):
+    dd = float(dd)
+    degrees = int(dd)
+    minutes = int((dd - degrees) * 60)
+    seconds = (dd - degrees - minutes / 60) * 3600
+    return [degrees, minutes, seconds]
+
+
+
+
 def rot_x(deg = 90):
     r = math.radians(deg)
     c, s = math.cos(r), math.sin(r)

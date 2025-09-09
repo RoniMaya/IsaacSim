@@ -122,7 +122,7 @@ delta_az = 80
 delta_el = 50
 radar_angle = [0, 90, 180]               
 origin_world_radar = np.array([transformed_vertices[0], transformed_vertices[1], transformed_vertices[2]+3])
-radar = Radar(rcs_file_path, radar_prop_path, "ball", origin_world_radar, radar_angle, delta_az=delta_az, delta_el=delta_el)
+radar = Radar(rcs_file_path, radar_prop_path, origin_world_radar, radar_angle, delta_az=delta_az, delta_el=delta_el, lat_lon_pos = camera_position_dms)
 
 
 
@@ -262,8 +262,8 @@ while simulation_app.is_running():
 
         # ------------------ rendering update ------------------
         world.step(render=should_render) # update the world simulation, render the frame if should_render is True
-        target, false_alarm = radar.get_detections(translation, orientation, velocity)
-        target2, false_alarm2 = radar.get_detections(translation_car2, orientation_car2, velocity_car2)
+        target, false_alarm = radar.get_detections(translation, orientation, velocity,'car1')
+        target2, false_alarm2 = radar.get_detections(translation_car2, orientation_car2, velocity_car2,'car2')
         target = radar.check_if_targets_in_same_bin( [target, target2], 'range')
 
         target = {k: np.concatenate([np.atleast_1d(d.get(k, [])) for d in target]) for k in set().union(*target)}

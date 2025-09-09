@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Keyboard Control</title>
+  <script>
+    const DEVICE_NAME = "keyboard1";
+    const pressed = new Set();
+
+    const ARROWS_AND_SPACE = new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "]);
+
+    function send(endpoint, key) {
+      fetch(`http://127.0.0.1:9000/${endpoint}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ device: DEVICE_NAME, key: key.toUpperCase?.() ?? key })
+      }).catch(console.error);
+    }
+
+    function press(key)   { if (!pressed.has(key)) { pressed.add(key); send("press", key); } }
+    function release(key) { if (pressed.has(key)) { pressed.delete(key); send("release", key); } }
+
+    document.addEventListener("keydown", (ev) => {
+      // prevent scroll/OS accel capturing arrows & space
+      if (ARROWS_AND_SPACE.has(ev.key)) ev.preventDefault();
+      // ignore auto-repeat keydowns
+      if (ev.repeat) return;
+      press(ev.key);
+    });
+
+    document.addEventListener("keyup", (ev) => {
+      if (ARROWS_AND_SPACE.has(ev.key)) ev.preventDefault();
+      release(ev.key);
+    });
+
+    // Safety net: if we lose focus or hide the tab, release everything
+    function releaseAll(reason="blur/hidden") {
+      for (const key of Array.from(pressed)) release(key);
+      console.log(`Released all due to ${reason}`);
+    }
+    window.addEventListener("blur", () => releaseAll("blur"));
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) releaseAll("visibilitychange");
+    });
+    window.addEventListener("beforeunload", () => releaseAll("beforeunload"));
+  </script>
+</head>
+<body>
+  <h2>Focus this window and use arrows / WASD</h2>
+</body>
+</html>
+

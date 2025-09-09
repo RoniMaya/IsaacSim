@@ -4,9 +4,9 @@ from isaacsim import SimulationApp
 # Make sure you installed a local nucleus server before this
 simulation_app = SimulationApp({'headless': True, 'renderer': 'RaytracedLighting'})
 
-from Input_utils.InputManager import InputManager
-from Input_utils.InputServer import InputServer
-from Input_utils.InputMapper import InputMapper
+from InputManager import InputManager
+from InputServer import InputServer
+from InputMapper import InputMapper
 import threading
 
 
@@ -22,8 +22,8 @@ from Asset import Asset
 from CameraClass import CameraClass
 from Enviorment import Enviorment
 from Controller import Controller
-from Publishers.RingBuffer import RingBuffer
-from Publishers.VideoPublisher import VideoPublisher
+from RingBuffer import RingBuffer
+from VideoPublisher import VideoPublisher
 import Utils
 import os
 import time
@@ -32,19 +32,19 @@ from pxr import Usd, UsdGeom, UsdPhysics, Gf, UsdLux,PhysxSchema, Sdf, Vt
 
 import omni.usd
 from scipy.interpolate import splprep, splev
-# from Publishers.DetectionPublisherMQTT import DetectionPublisherMQTT
-from Publishers.DetectionPublisher import DetectionPublisher
+# from DetectionPublisherMQTT import DetectionPublisherMQTT
+from DetectionPublisher import DetectionPublisher
 
 import paho.mqtt.client as mqtt
 import cv2
 
 from path_define import (
-    CFG_FILE, STAGE_PATH, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH,
-    TEXTURE_SKY, CESIUM_TRANSFORM,
+    CFG_FILE, STAGE_PATH, CAR_ASSET_PATH,
+    VAN_ASSET_PATH, TEXTURE_SKY, CESIUM_TRANSFORM,
     RCS_FILE_PATH, RADAR_PROP_PATH
 )
 
-print("Paths:", STAGE_PATH, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH, TEXTURE_SKY, CESIUM_TRANSFORM, RCS_FILE_PATH, RADAR_PROP_PATH)
+print("Stage path is:", STAGE_PATH)
 
 
 width = 640
@@ -56,6 +56,14 @@ detection_frequency = 1  # Hz
 render_every_n_frame = int(physics_frequency / rendering_frequency)
 asset_speed = 80  # Speed of the asset in the simulation
 delta_angle = 0.5
+CFG_FILE  = '/mnt/omniverse_assets/bindings.yaml'
+stage_path = "/mnt/omniverse_assets/ogmar/z_upv2.usd"
+car_asset_path = "/mnt/omniverse_assets/car/car_v7.usd"
+van_asset_path = "/mnt/omniverse_assets/car/car_v9_rough.usd"
+texture_sky = "/mnt/omniverse_assets/sky_chat.png"
+cesium_transformation = "/mnt/omniverse_assets/ogmar/conf.JSON"
+rcs_file_path = '/mnt/omniverse_assets/radar/radar_rcs_maps/rcs_ford_raptor_1.pkl'
+radar_prop_path = '/mnt/omniverse_assets/radar/MAGOS.yaml'
 
 
 
@@ -87,7 +95,7 @@ threading.Thread(target=radar_pub.start, daemon=True).start()
 
 
 
-cesium_transformation = Utils.cesium_transformation(CESIUM_TRANSFORM)
+cesium_transformation = Utils.cesium_transformation(cesium_transformation)
 
 
 
@@ -98,8 +106,8 @@ transformed_vertices = Utils.get_mesh_position_from_dms(camera_position_dms, ces
 
 
 scale_axis = {asset_name:Utils.get_usd_props(asset_path) for asset_name, asset_path in zip([ car1_path, car2_path],
-                                                                                            [ CAR_BLACK_ASSET_PATH, CAR_ORANGE_ASSET_PATH])}
-open_stage(STAGE_PATH)
+                                                                                            [ car_asset_path, van_asset_path])}
+open_stage(stage_path)
 
 
 spline_position_dms = [
@@ -141,7 +149,7 @@ delta_el = 50
 
 radar_angle = [0, 90, 90]               
 origin_world_radar = np.array([transformed_vertices[0], transformed_vertices[1], transformed_vertices[2]+3])
-radar = Radar(RCS_FILE_PATH, RADAR_PROP_PATH, origin_world_radar, radar_angle,
+radar = Radar(rcs_file_path, radar_prop_path, origin_world_radar, radar_angle,
                delta_az=delta_az, delta_el=delta_el,lat_lon_pos = camera_position_dms)
 
 
@@ -151,7 +159,7 @@ fwd_radar = radar.radar_rotation.apply(np.array([0,0,1.0]))
 world = World()
 
 
-enviorment = Enviorment(world, light_path="/World/sky/DomeLight", floor_path="/World/z_upv2", texture_sky = TEXTURE_SKY, light_intensity = 1000)
+enviorment = Enviorment(world, light_path="/World/sky/DomeLight", floor_path="/World/z_upv2", texture_sky = texture_sky, light_intensity = 1000)
 enviorment.set_dome_direction({'Y':180, 'Z':180})
 
 
@@ -215,9 +223,9 @@ camera.camera.initialize()
 
 
 # cube2 = Asset(car_prim_path)
-car1 = Asset(car1_path, usd_load_path=CAR_ORANGE_ASSET_PATH, rigid_prim=True, scale=[scale_axis[car1_path][0]*2]*3)
+car1 = Asset(car1_path, usd_load_path=car_asset_path, rigid_prim=True, scale=[scale_axis[car1_path][0]*2]*3)
 # tree = Asset(tree_path, usd_load_path=tree_asset_path, rigid_prim=False, scale=[scale_axis[tree_path][0]]*3)
-car2 = Asset(car2_path, usd_load_path=CAR_BLACK_ASSET_PATH, rigid_prim=True, scale=[scale_axis[car2_path][0]*2]*3)
+car2 = Asset(car2_path, usd_load_path=van_asset_path, rigid_prim=True, scale=[scale_axis[car2_path][0]*2]*3)
 
 controller = Controller(imapper.cfg)
 camera_cube.disable_gravity()

@@ -32,8 +32,8 @@ from pxr import Usd, UsdGeom, UsdPhysics, Gf, UsdLux,PhysxSchema, Sdf, Vt
 
 import omni.usd
 from scipy.interpolate import splprep, splev
-# from Publishers.DetectionPublisherMQTT import DetectionPublisherMQTT
-from Publishers.DetectionPublisher import DetectionPublisher
+from Publishers.DetectionPublisherMQTT import DetectionPublisherMQTT
+# from Publishers.DetectionPublisher import DetectionPublisher
 
 import paho.mqtt.client as mqtt
 import cv2
@@ -72,13 +72,13 @@ threading.Thread(target=input_server.start, daemon=True).start()
 video_rb = RingBuffer(capacity=8, drop_policy="latest")
 VideoPublisher(video_rb, width=width, height=height, target_fps=rendering_frequency)  # starts its own thread
 
-# radar_rb = RingBuffer(capacity=512, drop_policy="latest")
-# radar_pub = DetectionPublisherMQTT(ring_buffer=radar_rb, target_fps=1)
-# threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
-
 radar_rb = RingBuffer(capacity=512, drop_policy="latest")
-radar_pub = DetectionPublisher(ring_buffer=radar_rb, target_fps=1)
-threading.Thread(target=radar_pub.start, daemon=True).start()
+radar_pub = DetectionPublisherMQTT(ring_buffer=radar_rb, target_fps=1)
+threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
+
+# radar_rb = RingBuffer(capacity=512, drop_policy="latest")
+# radar_pub = DetectionPublisher(ring_buffer=radar_rb, target_fps=1)
+# threading.Thread(target=radar_pub.start, daemon=True).start()
 
 
 

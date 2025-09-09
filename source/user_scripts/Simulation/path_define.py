@@ -2,7 +2,7 @@
 import os
 from pathlib import Path, PurePosixPath
 
-BASE = os.environ.get("OMNI_ASSETS", "/mnt/omniverse_assets").rstrip("/")
+BASE = os.environ.get("OMNI_ASSETS").rstrip("/")
 
 def _is_omniverse(uri: str) -> bool:
     return uri.startswith("omniverse://")

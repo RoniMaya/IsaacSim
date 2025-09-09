@@ -14,6 +14,7 @@
             "env": {
                 "RESOURCE_NAME": "IsaacSim",
                 "RMW_IMPLEMENTATION": "rmw_fastrtps_cpp",
+                "OMNI_ASSETS": "/mnt/omniverse_assets",
             },
             "python": "${workspaceFolder}/_build/linux-x86_64/release/kit/python/bin/python3",
             "envFile": "${workspaceFolder}/.vscode/.python_samples.env",

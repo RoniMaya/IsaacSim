@@ -66,6 +66,11 @@ imgr = InputManager()
 input_server = InputServer(imgr)
 imapper = InputMapper(CFG_FILE)
 
+
+cesium_transformation = Utils.cesium_transformation(CESIUM_TRANSFORM)
+radar = Radar(RCS_FILE_PATH, RADAR_PROP_PATH,cesium_transformation = cesium_transformation)
+
+
 # Start background threads -----------------------------------------------------------
 # start server thread - this will listen to controller inputs
 threading.Thread(target=input_server.start, daemon=True).start()
@@ -73,7 +78,7 @@ video_rb = RingBuffer(capacity=8, drop_policy="latest")
 VideoPublisher(video_rb, width=width, height=height, target_fps=rendering_frequency)  # starts its own thread
 
 radar_rb = RingBuffer(capacity=512, drop_policy="latest")
-radar_pub = DetectionPublisherMQTT(ring_buffer=radar_rb, target_fps=1)
+radar_pub = DetectionPublisherMQTT(radar_rb, radar.radar_properties, target_fps=1)
 threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
 
 # radar_rb = RingBuffer(capacity=512, drop_policy="latest")
@@ -81,20 +86,13 @@ threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
 # threading.Thread(target=radar_pub.start, daemon=True).start()
 
 
-
-# Add ogmar--------------------------------------------------------------------------------------------
-
-
-
-
-cesium_transformation = Utils.cesium_transformation(CESIUM_TRANSFORM)
-
-
-
-
 # find camera position from real world coordinates
 camera_position_dms = {'lon':[35,22,35.36,'E'], 'lat':[30,55,45.36,'N'],'height':-276}#,'lon':[35,22,35.57,'E'], 'lat':[30,55,45.43,'N'],'height':-270}
 transformed_vertices = Utils.get_mesh_position_from_dms(camera_position_dms, cesium_transformation)
+
+
+# Add ogmar--------------------------------------------------------------------------------------------
+
 
 
 scale_axis = {asset_name:Utils.get_usd_props(asset_path) for asset_name, asset_path in zip([ car1_path, car2_path],
@@ -120,7 +118,6 @@ spline_position_dms = [
 
 spline_points_car1, spline_points_der_car1,euler_initial_angles_car1 = Utils.generate_spline_path(spline_position_dms, cesium_transformation, spline_param = 3, num_samples = 500, add_z = 0)
 
-
 spline_position_dms_car2 = [
  {'lon':[35,22,35.80,'E'], 'lat':[30,55,42.44,'N'],'height':-303},
  {'lon':[35,22,34.32,'E'], 'lat':[30,55,42.23,'N'],'height':-303},
@@ -134,36 +131,18 @@ spline_points_car2, spline_points_der_car2,euler_initial_angles_car2 = Utils.gen
 print("initilizing radar")
 
 text_for_image = {}
-delta_az = 80
-delta_el = 50
-
-
-
-radar_angle = [0, 90, 90]               
-origin_world_radar = np.array([transformed_vertices[0], transformed_vertices[1], transformed_vertices[2]+3])
-radar = Radar(RCS_FILE_PATH, RADAR_PROP_PATH, origin_world_radar, radar_angle,
-               delta_az=delta_az, delta_el=delta_el,lat_lon_pos = camera_position_dms)
-
-
-fwd_radar = radar.radar_rotation.apply(np.array([0,0,1.0]))
-
-
 world = World()
 
 
 enviorment = Enviorment(world, light_path="/World/sky/DomeLight", floor_path="/World/z_upv2", texture_sky = TEXTURE_SKY, light_intensity = 1000)
 enviorment.set_dome_direction({'Y':180, 'Z':180})
 
-
 curves = UsdGeom.BasisCurves.Define(enviorment.stage, "/World/RadarCenter")
 curves.CreateTypeAttr("linear")
 curves.CreateCurveVertexCountsAttr([2])
-curves.CreatePointsAttr([origin_world_radar, origin_world_radar + fwd_radar * radar.radar_properties['r_max']])
+curves.CreatePointsAttr([radar.radar_origin, radar.radar_origin + radar.radar_properties['fwd_radar'] * radar.radar_properties['r_max']])
 curves.CreateWidthsAttr([0.2])
 UsdGeom.Gprim(curves.GetPrim()).CreateDisplayColorAttr([Gf.Vec3f(0.0,1.0,0.0)])  # green
-
-
-
 world.reset()
 
 
@@ -260,6 +239,8 @@ from PolarPlotReusable import PolarPlotReusable
 
 polar_plot = PolarPlotReusable(size=(220,220), r_max=400)
 
+time_to_wait_physics = 1.0 / physics_frequency
+
 while simulation_app.is_running():
     if world.is_playing():
         now = time.monotonic()
@@ -348,5 +329,5 @@ while simulation_app.is_running():
             frame_rgb_bytes = camera.frame_in_bytes(None, az_deg=detection.get('azimuth', None), r_m=detection.get('range', None), polar_plot = polar_plot)
             if frame_rgb_bytes is not None:
                 video_rb.push({"bytes": frame_rgb_bytes, "seq": frame_count})  # Add the frame to the queue for processing
-
+        time.sleep(time_to_wait_physics)
     frame_count += 1

@@ -15,25 +15,20 @@ print("NumPy:", np.__version__, "SciPy:", scipy.__version__)
 
 class Radar:
 
-    def __init__(self, rcs_file_path, radar_prop_path, radar_origin, 
-                 radar_angle=np.array([0, 90, 0]), delta_az=80.0, delta_el=40.0, det_per_sec = 1, lat_lon_pos = None):
+    def __init__(self, rcs_file_path, radar_prop_path, 
+                   det_per_sec = 1,  cesium_transformation = None):
         self.rcs_file_path = rcs_file_path
-        self.radar_id = "radar"
-        self.radar_origin = radar_origin # defines origin of radar in world FoR
-        self.radar_angle = radar_angle # defines rotation of radar
-        self.radar_rotation = self.define_rotation(radar_angle) # defines rotation of radar to world FoR
-
-        self.delta_az = delta_az
-        self.delta_el = delta_el
-        self.load_rcs_data()
         self.speed_of_light = 299792458.0  # m/s
+        self.cesium_transformation = cesium_transformation 
         self.load_radar_properties(radar_prop_path)
+        self.radar_rotation = self.define_rotation(self.radar_angle) # defines rotation of radar to world FoR
+
+
+        self.load_rcs_data()
         self.det_per_sec = det_per_sec
         self.time_between_detections = 1.0 / det_per_sec
 
-        if lat_lon_pos:
-            self.lat0_deg, self.lon0_deg, _ = Utils.dms_to_dd(lat_lon_pos['lat']), Utils.dms_to_dd(lat_lon_pos['lon']), lat_lon_pos['height']
-
+        self.lat0_deg, self.lon0_deg = self.radar_properties['lat'] ,self.radar_properties['lon']
     def sample_from_rcs(self):
         pt = np.array([self.total_az, self.total_el])
         return float(self._rcs_interp(pt))
@@ -52,16 +47,37 @@ class Radar:
         self.radar_properties = yaml.safe_load(open(radar_prop_path, 'r')) 
         self.radar_properties['B'] = self.speed_of_light / (2 * self.radar_properties['r_resolution'])
         self.radar_properties["wave_length"] = self.speed_of_light / self.radar_properties["fc"]  # wavelength in meters
-
-
         self.radar_properties['range_vector'] = np.arange(0, self.radar_properties['r_max'], self.radar_properties['r_resolution'])
         self.radar_properties['azimuth_vector'] = np.arange(- self.radar_properties['az_max']//2, self.radar_properties['az_max']//2, self.radar_properties['az_resolution'])
         self.radar_properties['velocity_vector'] = np.arange(0.3, self.radar_properties['vel_max'], self.radar_properties['vel_resolution'])
         self.num_of_cells = len(self.radar_properties['range_vector']) * len(self.radar_properties['azimuth_vector']) * len(self.radar_properties['velocity_vector'])
-        self.radar_rotation = self.define_rotation(self.radar_angle) # rotate radar to world FoR
+        self.radar_rotation = self.define_rotation(self.radar_properties['rotation']) # rotate radar to world FoR
+        self.radar_angle = self.radar_properties['rotation']
+        if self.cesium_transformation is not None:
+            self.radar_origin = Utils.get_mesh_position_from_dms(self.radar_properties['position_dms'], self.cesium_transformation)[0:3]
+        self.radar_origin[2] = self.radar_origin[2] + 3
+
+        self.radar_properties['lat'] = Utils.dms_to_dd(self.radar_properties['position_dms']['lat'])
+        self.radar_properties['lon'] = Utils.dms_to_dd(self.radar_properties['position_dms']['lon'])
+        self.radar_properties['height'] = self.radar_properties['position_dms']['height']
+        self.radar_properties['azimuth'], self.radar_properties['elevation'], self.radar_properties['fwd_radar'] = self.calculate_az_el_fwd()
+
+
+        self.delta_az = self.radar_properties['hfov']
+        self.delta_el = self.radar_properties['vfov']
+        self.radar_id = self.radar_properties['uid']
+        
 
     def wrap180(self,a): 
         return (a + 180) % 360 - 180
+
+
+    def calculate_az_el_fwd(self):
+        fwd_radar = self.radar_rotation.apply(np.array([0,0,1.0]))
+        azimuth = np.arctan2(fwd_radar[0], fwd_radar[1]) * 180 / np.pi
+        elevation = np.arcsin(fwd_radar[2] / np.linalg.norm(fwd_radar)) * 180 / np.pi
+        return azimuth, elevation, fwd_radar
+
 
 
     def calculate_target_in_radar_for(self, origin_world_target, target_angle, target_velocity):

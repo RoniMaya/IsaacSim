@@ -42,7 +42,7 @@ def validate_local_paths():
         return []
     import os
     candidates = [
-        CFG_FILE, STAGE_PATH, CAR_ASSET_PATH, VAN_ASSET_PATH, TEXTURE_SKY,
+        CFG_FILE, STAGE_PATH, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH, TEXTURE_SKY,
         CESIUM_TRANSFORM, RCS_FILE_PATH, RADAR_PROP_PATH
     ]
     missing = [p for p in candidates if not os.path.exists(p)]

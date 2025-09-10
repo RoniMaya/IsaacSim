@@ -19,8 +19,6 @@ DEFAULT_TRACKING_TIMEOUT = 10
 
 class DetectionPublisherMQTT():
 
-
-
     def __init__(self, ring_buffer,radar_params, target_fps = 1,mqtt_properties = {'mqtt_host': '100.87.66.85', 
                                                                       'mqtt_port': 1883,
                                                                       'mqtt_topic': '/device/magos/magos-service/platform/',
@@ -127,7 +125,7 @@ class DetectionPublisherMQTT():
         payload = self.generate_radar(lat,lon, height,azimuth, elevation, hfov, vfov)
 
         self.mqtt_client.publish(
-            f"{self.mqtt_properties['mqtt_topic']}/telemetry/",
+            f"{self.mqtt_properties['mqtt_topic']}telemetry/",
             payload,
             qos=self.mqtt_properties.get('mqtt_qos', 0),
             retain=self.mqtt_properties.get('mqtt_retain', False),
@@ -140,9 +138,9 @@ class DetectionPublisherMQTT():
         while True:
             item = self._ring.latest()  # direct read; no shared state
             if item is None: 
-                self.publish_target(None,None,None,f"{self.mqtt_properties['mqtt_topic']}/detections/")
+                self.publish_target(None,None,None,f"{self.mqtt_properties['mqtt_topic']}detections/")
             else:
-                [self.publish_target(target_id, lat, lon,f"{self.mqtt_properties['mqtt_topic']}/detections/") for target_id, lat, lon in zip(item['id'], item['lat'], item['lon'])]
+                [self.publish_target(target_id, lat, lon,f"{self.mqtt_properties['mqtt_topic']}detections/") for target_id, lat, lon in zip(item['id'], item['lat'], item['lon'])]
             time.sleep(period)
 
         

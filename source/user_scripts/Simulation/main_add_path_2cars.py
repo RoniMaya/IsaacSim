@@ -77,9 +77,14 @@ threading.Thread(target=input_server.start, daemon=True).start()
 video_rb = RingBuffer(capacity=8, drop_policy="latest")
 VideoPublisher(video_rb, width=width, height=height, target_fps=rendering_frequency)  # starts its own thread
 
+
+mqtt_properties = {'mqtt_host': '127.0.0.1','mqtt_port': 1883,'mqtt_topic': '/device/magos/magos-service/platform/',
+'mqtt_qos': 0,'mqtt_retain': False, 'client_id': "radar_publisher"}
+
 radar_rb = RingBuffer(capacity=512, drop_policy="latest")
-radar_pub = DetectionPublisherMQTT(radar_rb, radar.radar_properties, target_fps=1)
+radar_pub = DetectionPublisherMQTT(radar_rb, radar.radar_properties, target_fps=1, mqtt_properties = mqtt_properties)
 threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
+
 
 # radar_rb = RingBuffer(capacity=512, drop_policy="latest")
 # radar_pub = DetectionPublisher(ring_buffer=radar_rb, target_fps=1)
@@ -92,9 +97,6 @@ transformed_vertices = Utils.get_mesh_position_from_dms(camera_position_dms, ces
 
 
 # Add ogmar--------------------------------------------------------------------------------------------
-
-
-
 scale_axis = {asset_name:Utils.get_usd_props(asset_path) for asset_name, asset_path in zip([ car1_path, car2_path],
                                                                                             [ CAR_BLACK_ASSET_PATH, CAR_ORANGE_ASSET_PATH])}
 open_stage(STAGE_PATH)

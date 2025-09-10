@@ -242,7 +242,8 @@ from PolarPlotReusable import PolarPlotReusable
 polar_plot = PolarPlotReusable(size=(220,220), r_max=400)
 
 time_to_wait_physics = 1.0 / physics_frequency
-
+time_to_restart_scenario = 60*2
+restart_time = time.monotonic()
 while simulation_app.is_running():
     if world.is_playing():
         now = time.monotonic()
@@ -281,7 +282,8 @@ while simulation_app.is_running():
         # Get the final velocity for your radar
         velocity = car1.get_linear_velocity(orientation)
     
-        if controller.reset_asset(mapping, 'car1'):
+        if controller.reset_asset(mapping, 'car1') or now - restart_time  >= time_to_restart_scenario :
+            restart_time = now
             car1.set_pose(translation=np.array(spline_points_car1[0]), orientation = np.array([0,0,euler_initial_angles_car1]))
             car2.set_pose(translation=np.array(spline_points_car2[0]), orientation = np.array([0,0,180-euler_initial_angles_car2]))
 

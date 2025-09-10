@@ -78,11 +78,11 @@ video_rb = RingBuffer(capacity=8, drop_policy="latest")
 VideoPublisher(video_rb, width=width, height=height, target_fps=rendering_frequency)  # starts its own thread
 
 
-mqtt_properties = {'mqtt_host': '127.0.0.1','mqtt_port': 1883,'mqtt_topic': '/device/magos/magos-service/platform/',
-'mqtt_qos': 0,'mqtt_retain': False, 'client_id': "radar_publisher"}
+# mqtt_properties = {'mqtt_host': '127.0.0.1','mqtt_port': 1883,'mqtt_topic': '/device/magos/magos-service/platform/',
+# 'mqtt_qos': 0,'mqtt_retain': False, 'client_id': "radar_publisher"}
 
 radar_rb = RingBuffer(capacity=512, drop_policy="latest")
-radar_pub = DetectionPublisherMQTT(radar_rb, radar.radar_properties, target_fps=1, mqtt_properties = mqtt_properties)
+radar_pub = DetectionPublisherMQTT(radar_rb, radar.radar_properties, target_fps=1)
 threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
 
 

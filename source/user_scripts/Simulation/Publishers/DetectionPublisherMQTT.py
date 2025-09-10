@@ -41,49 +41,44 @@ class DetectionPublisherMQTT():
             allow_headers=["*"],
             allow_credentials=False,
         )
-
+        self.radar_params = radar_params
         self.mqtt_properties = mqtt_properties
         self._mqtt_connect(radar_params)
 
     def _mqtt_connect(self, radar_params):
         self.mqtt_client = mqtt.Client(protocol=mqtt.MQTTv5)
         self.mqtt_client.connect(self.mqtt_properties['mqtt_host'], self.mqtt_properties['mqtt_port'], keepalive=30)
-        self.publish_radar(radar_params)
+        payload = self.generate_json()
         self.mqtt_client.loop_start()
 
-    def generate_radar(self,  lat,lon, height,azimuth, elevation, hfov, vfov, radar_id = 'radar_sim'):
-        json_dict = {
-            "type": "DEVICE",
-            "object_uid": radar_id,
-            "source_uid": "simulation",
-            "time": datetime.utcnow().replace(tzinfo=UTC).isoformat(),
-        "point": {
-            "lat": lat,
-            "lon": lon,
-            "hae": height
-        },
-        "current_view_sensor_info": {
-            "azimuth": azimuth,
-            "elevation": elevation,
-            "hfov": hfov,
-            "vfov": vfov
-        },
-          "camera_tracking": False
-        }
-        return json.dumps(json_dict, separators=(",", ":"))
 
 
 
-    def generate_target(self, target_id,lat,lon, radar_id = "radar_sim"):
+
+    def generate_json(self,lon = None,lat = None, target_id = 'radar', type_target_device = "device"):
+        if type_target_device == 'target':
+            stale =  (datetime.utcnow().replace(tzinfo=UTC) + timedelta(seconds=DEFAULT_TRACKING_TIMEOUT)).isoformat()
+            start = datetime.utcnow().replace(tzinfo=UTC).isoformat()
+            hae = 0
+            status = None
+        else:
+            stale =  None
+            start = None
+            hae = self.radar_params.get('height',None)
+            lat = self.radar_params['lat']
+            lon = self.radar_params['lon']
+            status = "OK"
+
         json_dict = {
             "version": "0.0.1",
-            "source_uid": "simulation",
+            "source_uid": "magos-service",
             "time": datetime.utcnow().replace(tzinfo=UTC).isoformat(),
             "how": None,
-            "type": "target",
-        "stale": (datetime.utcnow().replace(tzinfo=UTC) + timedelta(seconds=DEFAULT_TRACKING_TIMEOUT)).isoformat(),
-        "start": datetime.utcnow().replace(tzinfo=UTC).isoformat(),
-        "uid": radar_id,
+            "status": status,
+            "type": type_target_device,
+        "stale": stale,
+        "start": start,
+        "uid": self.radar_params.get('uid',None),
         "description": None,
         "object_uid": target_id,
         "point": {
@@ -91,11 +86,16 @@ class DetectionPublisherMQTT():
             "lon": lon,
             "ce": None,
             "le": None,
-            "hae": 0
+            "hae": hae,
         },
         "spatial_orientation": None,
         "current_view_poly": None,
-        "current_view_sensor_info": None,
+        "current_view_sensor_info": {"azimuth":self.radar_params['azimuth'],
+                                     "elevation":self.radar_params['elevation'],
+                                     "hfov":self.radar_params['hfov'],
+                                     "vfov":self.radar_params['vfov'],
+                                     "range":None},
+        "camera_tracking": False,
         "alarmed": False
         }
         return json.dumps(json_dict, separators=(",", ":"))
@@ -103,8 +103,7 @@ class DetectionPublisherMQTT():
 
     def publish_target(self,target_id,lat,lon, topic):
 
-        payload = self.generate_target(target_id,lat,lon)
-
+        payload = self.generate_json(lon,lat,target_id,type_target_device = 'target')
         self.mqtt_client.publish(
             topic,
             payload,
@@ -112,24 +111,13 @@ class DetectionPublisherMQTT():
             retain=self.mqtt_properties.get('mqtt_retain', False),
         )
 
-    def publish_radar(self,radar_params):
-
-        lat = radar_params['lat']
-        lon = radar_params['lon']
-        height = radar_params['height']
-        azimuth = radar_params['azimuth']
-        elevation = radar_params['elevation']
-        hfov = radar_params['hfov']
-        vfov = radar_params['vfov']
-        # generate radar message with
-        payload = self.generate_radar(lat,lon, height,azimuth, elevation, hfov, vfov)
-
+    def publish_radar(self, topic):
         self.mqtt_client.publish(
-            f"{self.mqtt_properties['mqtt_topic']}telemetry/",
-            payload,
+            topic,
+            self.generate_json(),
             qos=self.mqtt_properties.get('mqtt_qos', 0),
-            retain=self.mqtt_properties.get('mqtt_retain', False),
         )
+
 
 
 
@@ -138,9 +126,12 @@ class DetectionPublisherMQTT():
         while True:
             item = self._ring.latest()  # direct read; no shared state
             if item is None: 
-                self.publish_target(None,None,None,f"{self.mqtt_properties['mqtt_topic']}detections/")
+                self.publish_target(None,None,None,f"{self.mqtt_properties['mqtt_topic']}detections")
             else:
-                [self.publish_target(target_id, lat, lon,f"{self.mqtt_properties['mqtt_topic']}detections/") for target_id, lat, lon in zip(item['id'], item['lat'], item['lon'])]
+                [self.publish_target(target_id, lat, lon,f"{self.mqtt_properties['mqtt_topic']}detections") for target_id, lat, lon in zip(item['id'], item['lat'], item['lon'])]
+                [self.publish_target(target_id, lat, lon,f"{self.mqtt_properties['mqtt_topic']}map/events") for target_id, lat, lon in zip(item['id'], item['lat'], item['lon'])]
+                self.publish_radar(f"{self.mqtt_properties['mqtt_topic']}telemetry")
+                self.publish_radar(f"{self.mqtt_properties['mqtt_topic']}map/events")
             time.sleep(period)
 
         

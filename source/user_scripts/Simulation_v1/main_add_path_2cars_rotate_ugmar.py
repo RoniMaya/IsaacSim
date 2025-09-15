@@ -37,15 +37,14 @@ from Publishers.DetectionPublisherMQTT import DetectionPublisherMQTT
 
 import paho.mqtt.client as mqtt
 import cv2
-import utm 
 
 from path_define import (
-    CFG_FILE, STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH,
+    CFG_FILE, STAGE_PATH, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH,
     TEXTURE_SKY, CESIUM_TRANSFORM,
     RCS_FILE_PATH, RADAR_PROP_PATH
 )
 
-print("Paths:", STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH, TEXTURE_SKY, CESIUM_TRANSFORM, RCS_FILE_PATH, RADAR_PROP_PATH)
+print("Paths:", STAGE_PATH, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH, TEXTURE_SKY, CESIUM_TRANSFORM, RCS_FILE_PATH, RADAR_PROP_PATH)
 
 
 width = 640
@@ -68,6 +67,9 @@ input_server = InputServer(imgr)
 imapper = InputMapper(CFG_FILE)
 
 
+mqtt_properties = {'mqtt_host': '127.0.0.1','mqtt_port': 1883,'mqtt_topic': '/device/magos/magos-service/platform/',
+'mqtt_qos': 0,'mqtt_retain': False, 'client_id': "radar_publisher"}
+
 cesium_transformation = Utils.cesium_transformation(CESIUM_TRANSFORM)
 radar = Radar(RCS_FILE_PATH, RADAR_PROP_PATH,cesium_transformation = cesium_transformation)
 
@@ -83,7 +85,7 @@ VideoPublisher(video_rb, width=width, height=height, target_fps=rendering_freque
 # 'mqtt_qos': 0,'mqtt_retain': False, 'client_id': "radar_publisher"}
 
 radar_rb = RingBuffer(capacity=512, drop_policy="latest")
-radar_pub = DetectionPublisherMQTT(radar_rb, radar.radar_properties, target_fps=1)
+radar_pub = DetectionPublisherMQTT(radar_rb, radar.radar_properties, target_fps=1,mqtt_properties = mqtt_properties)
 threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
 
 
@@ -94,22 +96,13 @@ threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
 
 # find camera position from real world coordinates
 camera_position_dms = {'lon':[35,22,35.36,'E'], 'lat':[30,55,45.36,'N'],'height':-276}#,'lon':[35,22,35.57,'E'], 'lat':[30,55,45.43,'N'],'height':-270}
-# transformed_vertices = Utils.get_mesh_position_from_dms(camera_position_dms, cesium_transformation)
-
-
-
-position_lla = [Utils.dms_to_dd(camera_position_dms['lat']), Utils.dms_to_dd(camera_position_dms['lon'])]
-
-utm_lat_lon = utm.from_latlon(position_lla[0], position_lla[1])
-
-transformed_vertices = [utm_lat_lon[0] - 726797, utm_lat_lon[1] - 3424247, camera_position_dms['height'], 1]
-
+transformed_vertices = Utils.get_mesh_position_from_dms(camera_position_dms, cesium_transformation)
 
 
 # Add ogmar--------------------------------------------------------------------------------------------
 scale_axis = {asset_name:Utils.get_usd_props(asset_path) for asset_name, asset_path in zip([ car1_path, car2_path],
                                                                                             [ CAR_BLACK_ASSET_PATH, CAR_ORANGE_ASSET_PATH])}
-open_stage(STAGE_PATH_OGMAR)
+open_stage(STAGE_PATH)
 
 
 spline_position_dms = [
@@ -147,7 +140,7 @@ world = World()
 
 
 enviorment = Enviorment(world, light_path="/World/sky/DomeLight", floor_path="/World/z_upv2", texture_sky = TEXTURE_SKY, light_intensity = 1000)
-# enviorment.set_dome_direction({'Y':180, 'Z':180})
+enviorment.set_dome_direction({'Y':180, 'Z':180})
 
 curves = UsdGeom.BasisCurves.Define(enviorment.stage, "/World/RadarCenter")
 curves.CreateTypeAttr("linear")

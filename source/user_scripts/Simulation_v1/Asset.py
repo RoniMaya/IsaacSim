@@ -14,23 +14,40 @@ from isaacsim.core.utils import rotations
 
 class Asset():
     """Represents an asset in the simulation, managing its visual and physical properties."""
-    def __init__(self, prim_path, scale = [1,1,1], rigid_prim = True, geometry_prim = False,usd_load_path = None):
+    def __init__(self, parent,category, name,scale = [1,1,1], rigid_prim = True, geometry_prim = False,usd_load_path = None,physics = {}, colision_type="convexDecomposition"):
+        
+        self.root_path     = f"/{parent}/{category}/{name}"
+        self.geom_path     = f"{self.root_path}/Geom"
+        self.colliders_path= f"{self.root_path}/Colliders"
+        self.sensors_path  = f"{self.root_path}/Sensors"
+        self.root_xf   = XFormPrim(self.root_path, scale=scale)   # set scale on root Xform
+        self.visual_xf = XFormPrim(self.geom_path)
+        self.colision_type = colision_type
 
-        self.visual = XFormPrim(prim_path,scale = scale)
-        self.prim_path = prim_path
 
+        # --- visuals ----------------------------------------------------------
         if usd_load_path is not None:
-            self.visual.prim.GetReferences().AddReference(assetPath=usd_load_path)
+            self.visual_xf.prim.GetReferences().AddReference(assetPath=usd_load_path)
             mesh_prims = self.get_mesh_children()
             [self.apply_collision(prim) for prim in mesh_prims]
 
-        self.rigid = RigidPrim(prim_path) if rigid_prim == True else None
-        self.geometry = GeometryPrim(prim_path) if geometry_prim == True else None
+        
+        # --- physics ----------------------------------------------------------
+        self.rigid = None
+        if physics and physics.get("rigid", False):
+            self.rigid = RigidPrim(self.root_path)  # attach PhysxRigidBodyAPI at the root
+            self.rigid.enable_rigid_body_physics()
+            if "mass" in physics:
+                self.rigid.set_masses(physics["mass"])
+
+
+        # self.rigid = RigidPrim(prim_path) if rigid_prim == True else None
+        # self.geometry = GeometryPrim(prim_path) if geometry_prim == True else None
 
     def get_prim(self, prim_path = None):
         if prim_path == None:
-           prim_path = self.prim_path
-        return self.visual.prim.GetPrimAtPath(prim_path)
+           prim_path = self.root_path
+        return self.root_xf.prim.GetPrimAtPath(prim_path)
 
 
 
@@ -42,7 +59,7 @@ class Asset():
 
     def get_mesh_children(self):
         get_mesh_children = []
-        prim = self.visual.prim.GetPrimAtPath(self.prim_path)
+        prim = self.visual_xf.prim.GetPrimAtPath(self.root_path)
         all_prims = Usd.PrimRange(prim)
         for child_prim in all_prims:
             if child_prim.IsA(UsdGeom.Mesh):
@@ -55,7 +72,7 @@ class Asset():
 
         UsdPhysics.CollisionAPI.Apply(prim) 
         self.collision = UsdPhysics.MeshCollisionAPI.Apply(prim)
-        self.collision.GetApproximationAttr().Set("convexDecomposition")
+        self.collision.GetApproximationAttr().Set(self.colision_type)
 
     def set_pose(self, translation , orientation = None ):
         """
@@ -67,7 +84,7 @@ class Asset():
         """
         if orientation is not None:
             orientation=rotations.euler_angles_to_quat(orientation)
-        self.visual.set_local_pose(translation=translation, orientation=orientation)
+        self.visual_xf.set_local_pose(translation=translation, orientation=orientation)
 
     def update_prim_scale(self, scale):
         """
@@ -76,7 +93,7 @@ class Asset():
             scale (float or np.ndarray): A uniform scale factor (float) or a numpy array specifying non-uniform scaling [sx, sy, sz].
         """
 
-        self.visual.set_local_scale(scale=scale)
+        self.visual_xf.set_local_scale(scale=scale)
 
     def set_velocity_local(self, velocity,orientation):
         """
@@ -156,5 +173,5 @@ class Asset():
         """
         if orientation is not None:
             orientation=Utils.euler_to_quaternion(orientation)
-        self.visual.set_world_pose(position=translation, orientation=orientation)
+        self.visual_xf.set_world_pose(position=translation, orientation=orientation)
 

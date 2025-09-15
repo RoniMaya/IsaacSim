@@ -11,6 +11,10 @@ class Controller():
     def zoom_factor(self, mapping,key):
         return mapping[key]['zoom'] if key in mapping and 'zoom' in mapping[key] else 1
 
+    def rot_flag(self, mapping,key):
+        return mapping[key]['rot_deg'] if key in mapping and 'rot_deg' in mapping[key] else [0,0,0]
+
+
 
     def update_velocity_direction(self, mapping,key):
         """
@@ -85,4 +89,7 @@ class Controller():
         current_angle_rad = np.arctan2(current_heading_vector[1], current_heading_vector[0])
         angular_velocity = self.angular_velocity_p_controller(desired_angle_rad,current_angle_rad, asset_name, kp = kp)
         return angular_velocity, direction_vector*self.cfg[asset_name]['speed']
+    
+
+
 

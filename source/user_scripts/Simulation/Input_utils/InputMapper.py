@@ -55,6 +55,23 @@ class InputMapper():
             "+PITCH": np.array([0,1,0]), "-PITCH": np.array([0,-1,0]),
             "+ROLL": np.array([1,0,0]), "-ROLL": np.array([-1,0,0]),
         }.get(a, np.array([0,0,0]))
+    
+
+
+    # def yaw_pitch_roll_flag(self, axis: str):
+    #     """
+    #     Converts a yaw/pitch/roll axis string to a corresponding 3D rotation vector.
+    #     Args:
+    #         axis (str): Axis string (e.g., "+YAW", "-PITCH", "+ROLL").
+    #     Returns:
+    #         np.ndarray: How much to rotate in each axis.
+    #     """
+    #     a = axis.upper()
+    #     return {
+    #         "+YAWF": np.array(1), "-YAWF": np.array(-1),
+    #         "+PITCHF": np.array(1), "-PITCHF": np.array(-1),
+    #         "+ROLLF": np.array(1), "-ROLLF": np.array(-1),
+    #     }.get(a, np.array(0))
 
     def zoom_factor(self, zoom: str, zoom_factor: float):
         z = zoom.upper()
@@ -88,6 +105,8 @@ class InputMapper():
     def apply_axis_updates(self, mapping, axis_value):
         if 'local_move' in mapping:
             mapping['local_move'] += self.axis_to_vec(axis_value)
+        if 'rot_flag' in mapping:
+            mapping['rot_flag'] = self.yaw_pitch_roll_to_vec(axis_value)
         if 'rot_deg' in mapping:
             mapping['rot_deg'] += self.yaw_pitch_roll_to_vec(axis_value)
 
@@ -125,6 +144,8 @@ class InputMapper():
                 asset_mapping = self.apply_zoom_updates(asset_mapping, pressed_key['axis'], asset_profile['zoom_factor'])  
             if 'reset' in pressed_key:
                 asset_mapping['reset'] = self.reset(pressed_key['reset'])
+
+
 
 
     def calculate_mapping(self, pressed: dict) -> dict:

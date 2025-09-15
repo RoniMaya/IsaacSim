@@ -161,26 +161,81 @@ pole_h = 2
 
 
 
-DynamicCylinder(prim_path="/World/camera_prim/camera_poll", color=np.array([0, 255, 0]), radius=0.3, height=pole_h)
-camera_poll = Asset("World","camera_prim","camera_poll", physics={"rigid": True}, usd_load_path=None)
-camera_poll.set_pose(translation=np.array([small_house_enu_coords[0,0], small_house_enu_coords[0,1],small_house_enu_coords[0,2] + pole_h ]))
+DynamicCylinder(prim_path="/World/cam_poll", color=np.array([0, 255, 0]), radius=0.3, height=pole_h)
+camera_poll = Asset("/World/cam_poll")
+camera_poll.set_pose(translation=np.array([small_house_enu_coords[0,0], small_house_enu_coords[0,1],small_house_enu_coords[0,2] + pole_h +10]))
 camera_poll.disable_gravity()
 
 
 
 
 
-DynamicCuboid(prim_path="/World/camera_prim/camera_poll/cube", color=np.array([0, 255, 0]))
-camera_cube = Asset("World","camera_prim","camera_poll/cube", physics={"rigid": True}, usd_load_path=None)
+DynamicCuboid(prim_path="/World/cam_poll/cube", color=np.array([0, 255, 0]))
+camera_cube = Asset("/World/cam_poll/cube")
 camera_cube.set_pose(translation=np.array([0,0,2]), orientation = np.array([0,0,0]))
-camera = CameraClass(prim_path = f"{camera_cube.root_path}/camera",orientation = np.array([0, 0, 0]),translation = [0,0,0.0],resolution = (width, height))
+# camera = CameraClass(prim_path = "/World/cam_poll/cube/camera",orientation = np.array([0, 0, 0]),translation = [0,0,0.0],resolution = (width, height))
+
+
+
+# Bodies ---------------------------------------------------------
+stage = omni.usd.get_context().get_stage()
+base  = stage.DefinePrim("/World/Base", "Cube")
+child = stage.DefinePrim("/World/Child", "Cube")
+
+# Make BASE static (no RigidBodyAPI) so it anchors the joint:
+# If you want collisions on base, you can do: UsdPhysics.CollisionAPI.Apply(base)
+
+# Make CHILD dynamic so it can move:
+UsdPhysics.RigidBodyAPI.Apply(child)
+
+# Place them so the hinge can be co-located (simple test: same pose)
+UsdGeom.XformCommonAPI(base).SetTranslate((small_house_enu_coords[0,0],
+                                           small_house_enu_coords[0,1],
+                                           small_house_enu_coords[0,2]))
+                                           
+UsdGeom.XformCommonAPI(child).SetTranslate((small_house_enu_coords[0,0],
+                                            small_house_enu_coords[0,1],
+                                            small_house_enu_coords[0,2] + 10))
+
+# Revolute joint -------------------------------------------------
+rev = UsdPhysics.RevoluteJoint.Define(stage, Sdf.Path("/World/BaseToChildJoint"))
+rev.CreateBody0Rel().SetTargets([base.GetPath()])
+rev.CreateBody1Rel().SetTargets([child.GetPath()])
+
+# Set axis explicitly (use "Z" for yaw-like motion)
+rev.GetAxisAttr().Set("Z")
+
+# Co-locate anchors (same point/orient on both bodies)
+rev.CreateLocalPos0Attr().Set(Gf.Vec3f(0, 0, 0))
+rev.CreateLocalPos1Attr().Set(Gf.Vec3f(0, 0, -10))  # child origin is 10 up, hinge is 10 down from it
+rev.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
+rev.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
+
+# Drive (use PURE VELOCITY control) ------------------------------
+drive = UsdPhysics.DriveAPI.Apply(rev.GetPrim(), "angular")
+drive.CreateStiffnessAttr().Set(0.0)          # <-- critical: no position hold
+drive.CreateDampingAttr().Set(2.0)
+drive.CreateMaxForceAttr().Set(1000.0)        # give it authority
+drive.CreateTargetVelocityAttr().Set(30.0)    # deg/s
+drive.CreateDampingAttr().Set(500.0)   # higher value → stronger braking
+
+# (Don't set TargetPosition if you want velocity control)
+
+
+
+camera = CameraClass(prim_path = "/World/Child/camera",orientation = np.array([0, 0, 0]),translation = [0,0,2.0],resolution = (width, height))
 camera.camera.initialize()
-camera_cube.disable_gravity()
 
 
-car1 = Asset("World","vehicles","car1", physics={"rigid": True}, usd_load_path=CAR_ORANGE_ASSET_PATH, scale=[scale_axis[car1_path][0]]*3)
+
+
+
+
+
+car1 = Asset(car1_path, usd_load_path=CAR_ORANGE_ASSET_PATH, rigid_prim=True, scale=[scale_axis[car1_path][0]]*3)
 
 controller = Controller(imapper.cfg)
+camera_cube.disable_gravity()
 
 
 
@@ -217,20 +272,24 @@ while simulation_app.is_running():
         # get pressed keys from the input manager and update the physics and camera
         pressed_keys = imgr.snapshot()
         mapping = imapper.calculate_mapping(pressed_keys)  # {'keyboard1': {'W','A',...}} -> {'throttle': 1.0, 'steering': -1.0, ...}
+        print(mapping)
 
         # update velocity, orientation for each assets (+zoom for camera)__________________________________________
         # update the velocity, orientation and zoom of the "camera" cube based on the pressed keys
-        velocity = controller.update_velocity_direction(mapping, 'camera')
-        camera_orientation = controller.update_orientation(mapping, 'camera')
+        # velocity = controller.update_velocity_direction(mapping, 'camera')
+        # camera_orientation = controller.update_orientation(mapping, 'camera')
         zoom_factor = controller.zoom_factor(mapping, 'camera')
+        rot_flag = controller.rot_flag(mapping, 'camera')
+        print(rot_flag)
+
         #----------------------------------------------------------------------------
         # set the velocity, orientation and zoom of the "camera" cube
-        translation, orientation = camera_cube.get_position_and_orientation()
-        translation_poll, orientation_poll = camera_poll.get_position_and_orientation()
-        camera_poll.set_angular_velocity_local([np.array([0,0,camera_orientation[2]])], orientation_poll)
+        # translation, orientation = camera_cube.get_position_and_orientation()
+        # translation_poll, orientation_poll = camera_poll.get_position_and_orientation()
+        # camera_poll.set_angular_velocity_local([np.array([0,0,camera_orientation[2]])], orientation_poll)
 
-        camera_cube.set_angular_velocity_local([np.array([0,camera_orientation[1],0])], orientation)
-        camera_cube.set_velocity_local(velocity, orientation)
+        # camera_cube.set_angular_velocity_local([np.array([0,camera_orientation[1],0])], orientation)
+        # camera_cube.set_velocity_local(velocity, orientation)
         camera.zoom_camera(zoom_factor)
         #-------------------------------------------------------------------------
         # update the velocity, orientation and zoom of the "camera" cube based on the pressed keys
@@ -262,7 +321,11 @@ while simulation_app.is_running():
         target, false_alarm = radar.get_detections(translation, orientation, velocity, target_id = "car1")
         target = radar.check_if_targets_in_same_bin( [target], 'range')
 
-        
+                # Spin at 30 deg/s (positive around the joint axis)
+        drive.GetTargetPositionAttr().Set(0.0)   # ignore position
+        drive.GetTargetVelocityAttr().Set(rot_flag[2] * 30.0)  # deg/s
+
+
 
         target = {k: np.concatenate([np.atleast_1d(d.get(k, [])).tolist() for d in target]) for k in set().union(*target)}
 

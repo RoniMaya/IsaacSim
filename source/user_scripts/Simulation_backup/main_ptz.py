@@ -78,7 +78,7 @@ delta_az = 80
 delta_el = 30
 radar_angle = [0, 90, 0]               
 origin_world_radar = np.array([0, 0, 0])
-radar = Radar(rcs_file_path, radar_prop_path, "ball", origin_world_radar, radar_angle, delta_az=delta_az, delta_el=delta_el)
+# radar = Radar(rcs_file_path, radar_prop_path, "ball", origin_world_radar, radar_angle, delta_az=delta_az, delta_el=delta_el)
 
 
 world = World()
@@ -104,11 +104,11 @@ VisualCuboid(prim_path="/World/cube_radar", color=np.array([0, 0, 255]))
 
 
 # cube_radar.set_pose(translation=origin_world_radar, orientation=None)
-cube.set_pose(translation=np.array([0, 0, 50.0]), orientation = None)
+cube.set_pose(translation=np.array([0, 0, 0.0]), orientation = None)
 cube2.set_pose(translation=np.array([5, 0, 0.0]), orientation = None)
 
 # attatch a camera to the cube
-camera = CameraClass(prim_path = "/World/cube/camera",orientation = np.array([0, 90, 0]),translation = [0,0,0.0],resolution = (width, height))
+camera = CameraClass(prim_path = "/World/cube/camera",orientation = np.array([0, 0, 0]),translation = [0,0,0.0],resolution = (width, height))
 enviorment.add_dome_light(light_path="/dome_light",intensity= 1000)
 
 
@@ -137,8 +137,8 @@ child = stage.DefinePrim("/World/Child", "Cube")
 UsdPhysics.RigidBodyAPI.Apply(child)
 
 # Place them so the hinge can be co-located (simple test: same pose)
-UsdGeom.XformCommonAPI(base).SetTranslate((0, 0, 3))
-UsdGeom.XformCommonAPI(child).SetTranslate((0, 0, 3))
+UsdGeom.XformCommonAPI(base).SetTranslate((0, 0, 0))
+UsdGeom.XformCommonAPI(child).SetTranslate((0, 0, 4))
 
 # Revolute joint -------------------------------------------------
 rev = UsdPhysics.RevoluteJoint.Define(stage, Sdf.Path("/World/BaseToChildJoint"))
@@ -146,14 +146,17 @@ rev.CreateBody0Rel().SetTargets([base.GetPath()])
 rev.CreateBody1Rel().SetTargets([child.GetPath()])
 
 # Set axis explicitly (use "Z" for yaw-like motion)
-rev.GetAxisAttr().Set("Z")
+rev.GetAxisAttr().Set("Y")
 
 # Co-locate anchors (same point/orient on both bodies)
-rev.CreateLocalPos0Attr().Set(Gf.Vec3f(0, 0, 0))
-rev.CreateLocalPos1Attr().Set(Gf.Vec3f(0, 0, 0))
+rev.CreateLocalPos0Attr().Set(Gf.Vec3f(0, 0.5, 1))
+rev.CreateLocalPos1Attr().Set(Gf.Vec3f(0, 0.5, -1))
 rev.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
 rev.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
 
+# Limit rotation to ±45 degrees around the Y axis
+rev.CreateLowerLimitAttr().Set(-45)   # -45°
+rev.CreateUpperLimitAttr().Set(45)   # +45°
 # Drive (use PURE VELOCITY control) ------------------------------
 drive = UsdPhysics.DriveAPI.Apply(rev.GetPrim(), "angular")
 drive.CreateStiffnessAttr().Set(0.0)          # <-- critical: no position hold
@@ -214,19 +217,18 @@ while simulation_app.is_running():
         # ------------------ rendering update ------------------
         world.step(render=should_render) # update the world simulation, render the frame if should_render is True
 
-        target, false_alarm = radar.get_detections(translation, orientation, velocity)
-        detection = {"seq": frame_count, "time": round(time.time(),2)} | target | false_alarm
-        radar_rb.push(detection) # update the radar detection ring buffer 
+        # target, false_alarm = radar.get_detections(translation, orientation, velocity)
+        # detection = {"seq": frame_count, "time": round(time.time(),2)} | target | false_alarm
+        # radar_rb.push(detection) # update the radar detection ring buffer 
 
         # if should_render is True, get the camera frame and add it to the queue for processing
         if should_render:
             passed_time += now - last_time
             last_time = now
-            if print_detection:
 
-                all_data_text = radar.print_detections(text_for_image,target, false_alarm, passed_time)
-                all_data_text = f"{all_data_text} \n real target {radar.target_range} \n pd {radar.radar_properties['pd']}"
-            frame_rgb_bytes = camera.frame_in_bytes(all_data_text)
+                # all_data_text = radar.print_detections(text_for_image,target, false_alarm, passed_time)
+                # all_data_text = f"{all_data_text} \n real target {radar.target_range} \n pd {radar.radar_properties['pd']}"
+            frame_rgb_bytes = camera.frame_in_bytes()
             if frame_rgb_bytes is not None:
                 video_rb.push({"bytes": frame_rgb_bytes, "seq": frame_count})  # Add the frame to the queue for processing
 

@@ -3,7 +3,8 @@ from isaacsim.core.prims import RigidPrim,GeometryPrim
 import numpy as np
 from omni.isaac.core.prims import XFormPrim
 import omni.kit.commands
-from pxr import UsdShade, Gf, UsdGeom, Usd, UsdPhysics,PhysxSchema
+from pxr import UsdShade, Gf, UsdGeom, Usd, UsdPhysics,PhysxSchema,UsdLux,Sdf, Vt
+
 import omni.usd
 from omni.isaac.core.utils.torch import quat_rotate
 import warp as wp
@@ -11,6 +12,9 @@ import numpy as np
 import Utils
 from scipy.spatial.transform import Rotation as R
 from isaacsim.core.utils import rotations
+
+
+
 
 class Asset():
     """Represents an asset in the simulation, managing its visual and physical properties."""
@@ -57,7 +61,7 @@ class Asset():
         self.collision.GetApproximationAttr().Set("convexDecomposition")
 
 
-    def set_pose(self, translation , orientation = None ):
+    def set_pose(self, translation , orientation = None , local = True):
         """
         Sets the pose of the asset's visual representation.
         Args:
@@ -67,7 +71,10 @@ class Asset():
         """
         if orientation is not None:
             orientation=rotations.euler_angles_to_quat(orientation)
-        self.visual.set_local_pose(translation=translation, orientation=orientation)
+        if local == True:
+            self.visual.set_local_pose(translation=translation, orientation=orientation)
+        else:
+            self.visual.set_world_pose(translation=translation, orientation=orientation)
 
     def update_prim_scale(self, scale):
         """
@@ -78,23 +85,25 @@ class Asset():
 
         self.visual.set_local_scale(scale=scale)
 
-    def set_velocity_local(self, velocity,orientation):
+    def set_velocity(self, velocity,orientation = None, local = True):
         """
         Sets the linear velocity of the asset in local coordinates in world coordinates.
         Args:
             velocity (np.ndarray): A numpy array specifying the local velocity vector [vx, vy, vz] in world coordinates.
         """
-        world_velocity = Utils.quat_rotate_numpy(orientation, velocity)
-        self.rigid.set_linear_velocities([world_velocity])
+        if local == True:
+            velocity = Utils.quat_rotate_numpy(orientation, velocity)
+        self.rigid.set_linear_velocities([velocity])
 
 
-    def set_angular_velocity_local(self, angular_velocity,orientation):
+    def set_angular_velocity(self, angular_velocity,orientation = None, local = True):
         """
         Sets the angular velocity of the asset in local coordinates in world coordinates.
         Args:
             angular_velocity (np.ndarray): A numpy array specifying the local angular velocity vector [wx, wy, wz] in world coordinates.
         """
-        angular_velocity = Utils.quat_rotate_numpy(orientation, angular_velocity[0])
+        if local == True:
+            angular_velocity = Utils.quat_rotate_numpy(orientation, angular_velocity[0])
         self.rigid.set_angular_velocities([angular_velocity])
 
 
@@ -118,34 +127,4 @@ class Asset():
         # Get the direction the car's front is pointing
         current_heading_vector = current_rot.apply([1, 0, 0])
         return current_heading_vector
-
-    def set_velocity_world(self, world_velocity):
-        """
-        Sets the linear velocity of the asset in world coordinates.
-        Args:
-            velocity (np.ndarray): A numpy array specifying the velocity vector [vx, vy, vz] in world coordinates.
-        """
-        self.rigid.set_linear_velocities([world_velocity])
-
-    def set_angular_velocity_world(self, angular_velocity):
-        """
-        Sets the angular velocity of the asset in world coordinates.
-        Args:
-            angular_velocity (np.ndarray): A numpy array specifying the angular velocity vector [wx, wy, wz] in world coordinates.
-        """
-        self.rigid.set_angular_velocities([angular_velocity])
-
-
-
-    def set_pose_world(self, translation , orientation = None ):
-        """
-        Sets the pose of the asset's visual representation.
-        Args:
-            translation (np.ndarray): A numpy array specifying the new position for the primitive in the form [x, y, z].
-            orientation (np.ndarray, optional): A numpy array specifying the new orientation as a quaternion [x, y, z, w].
-                If None, the orientation remains unchanged. Defaults to None.
-        """
-        if orientation is not None:
-            orientation=Utils.euler_to_quaternion(orientation)
-        self.visual.set_world_pose(position=translation, orientation=orientation)
 

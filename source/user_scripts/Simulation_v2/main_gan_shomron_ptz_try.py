@@ -4,9 +4,9 @@ from isaacsim import SimulationApp
 # Make sure you installed a local nucleus server before this
 simulation_app = SimulationApp({'headless': True})
 
-from Input_utils.InputManager import InputManager
-from Input_utils.InputServer import InputServer
-from Input_utils.InputMapper import InputMapper
+from InputUtils.InputManager import InputManager
+from InputUtils.InputServer import InputServer
+from InputUtils.InputMapper import InputMapper
 import threading
 
 
@@ -40,7 +40,8 @@ import paho.mqtt.client as mqtt
 import cv2
 from GeoJSONLoader import GeoJSONLoader
 from isaacsim.core.utils import rotations 
-
+import Joints
+from DynamicAssets import ptz
 
 from path_define import (
     CFG_FILE, STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH,
@@ -154,87 +155,73 @@ world.get_physics_context().set_gravity(-500.0)
 
 small_house_enu_coords = np.vstack(geojson_loader.get_collisions( world, small_house_enu_coords))
 spline_points_car1 = np.vstack(geojson_loader.get_collisions( world, spline_points_car1))
-pole_h = 2
+pole_h = 20
 # new_z = hit[2][0].hit_position 
 
+# # --- build joint specs with human-friendly degrees ---
+# yaw_spec = Joints.make_joint_spec(
+#     axis="Z",
+#     parent_pos=Gf.Vec3f(0, 0, +0.1),   # top face of base (assuming 1 m cube)
+#     child_pos= Gf.Vec3f(0, 0, -0.1),   # bottom face of middle
+#     lower_deg=-180, upper_deg=180,
+#     stiffness=0.0, damping=300.0,
+#     max_force=1000.0,
+#     target_vel_deg_s=60.0
+# )
 
-
-
-VisualCuboid(prim_path="/World/camera_prim/base", color=np.array([0, 0, 255]))
-camera_base = Asset("/World/camera_prim/base", rigid_prim = False)
-camera_base.set_pose(translation=np.array([small_house_enu_coords[0,0], small_house_enu_coords[0,1],small_house_enu_coords[0,2]]), orientation = np.array([0,0,0]))
-
-
-
-
-DynamicCuboid(prim_path="/World/camera_prim/child", color=np.array([0, 0, 255]))
-camera_child = Asset("/World/camera_prim/child", rigid_prim = True)
-camera_child.set_pose(translation=np.array([small_house_enu_coords[0,0], small_house_enu_coords[0,1],small_house_enu_coords[0,2]+1]), orientation = np.array([0,0,0]))
-camera_child.disable_gravity()
-
-stage = omni.usd.get_context().get_stage()
-rev = UsdPhysics.RevoluteJoint.Define(stage, Sdf.Path("/World/camera_prim/joints/base"))
-rev.CreateBody0Rel().SetTargets([camera_base.prim_path])
-rev.GetAxisAttr().Set("Y")
-rev.CreateBody1Rel().SetTargets([camera_child.prim_path])
-rev.CreateLocalPos0Attr().Set(Gf.Vec3f(0, 0.5, 1))
-rev.CreateLocalPos1Attr().Set(Gf.Vec3f(0, 0.5, -1))
-rev.CreateLocalRot0Attr().Set(Gf.Quatf(1, 0, 0, 0))
-rev.CreateLocalRot1Attr().Set(Gf.Quatf(1, 0, 0, 0))
-# Limit rotation to ±45 degrees around the Y axis
-rev.CreateLowerLimitAttr().Set(-45)   # -45°
-rev.CreateUpperLimitAttr().Set(45)   # +45°
-# Drive (use PURE VELOCITY control) ------------------------------
-drive = UsdPhysics.DriveAPI.Apply(rev.GetPrim(), "angular")
-drive.CreateStiffnessAttr().Set(0.0)          # <-- critical: no position hold
-drive.CreateDampingAttr().Set(2.0)
-drive.CreateMaxForceAttr().Set(1000.0)        # give it authority
-drive.CreateTargetVelocityAttr().Set(30.0)    # deg/s
-drive.CreateDampingAttr().Set(300.0)   # higher value → stronger braking
+# pitch_spec = Joints.make_joint_spec(
+#     axis="Y",
+#     parent_pos=Gf.Vec3f(0, 0, +0.5),   # top face of middle
+#     child_pos= Gf.Vec3f(0, 0, -0.5),   # bottom face of child
+#     lower_deg=-45, upper_deg=45,
+#     stiffness=0.0, damping=300.0,
+#     max_force=1000.0,
+#     target_vel_deg_s=60.0
+# )
 
 
 
 
-# Bodies ---------------------------------------------------------
-# base  = stage.DefinePrim("/World/Base", "Cube")
-# child = stage.DefinePrim("/World/Child", "Cube")
-
-# Make BASE static (no RigidBodyAPI) so it anchors the joint:
-# If you want collisions on base, you can do: UsdPhysics.CollisionAPI.Apply(base)
-
-# Make CHILD dynamic so it can move:
-# UsdPhysics.RigidBodyAPI.Apply(child)
-# prim = stage.GetPrimAtPath("/World/Child")
-# physxAPI = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
-# physxAPI.CreateDisableGravityAttr(True)
-
-# Place them so the hinge can be co-located (simple test: same pose)
-# UsdGeom.XformCommonAPI(base).SetTranslate((small_house_enu_coords[0,0],
-#                                            small_house_enu_coords[0,1],
-#                                            small_house_enu_coords[0,2] ))
-                                           
-# UsdGeom.XformCommonAPI(child).SetTranslate((small_house_enu_coords[0,0],
-#                                             small_house_enu_coords[0,1],
-#                                             small_house_enu_coords[0,2]+5))
-
-# Revolute joint -------------------------------------------------
-# rev = UsdPhysics.RevoluteJoint.Define(stage, Sdf.Path("/World/BaseToChildJoint"))
-# rev.CreateBody0Rel().SetTargets([base.GetPath()])
-
-# Set axis explicitly (use "Z" for yaw-like motion)
-# rev.GetAxisAttr().Set("Y")
-
-# Co-locate anchors (same point/orient on both bodies)
-
-# (Don't set TargetPosition if you want velocity control)
-
-
-
-camera = CameraClass(prim_path = "/World/camera_prim/child/camera",orientation = np.array([0, 0, 0]),translation = [0.5,0,0.0],resolution = (width, height))
+drive_base, drive_middle = ptz.create_ptz_camera(enviorment.stage, prim_path = "/World/camera_prim", 
+                         translation = np.array([small_house_enu_coords[0,0], small_house_enu_coords[0,1],small_house_enu_coords[0,2]+pole_h]))
+camera = CameraClass(prim_path = "/World/camera_prim/child/camera",orientation = np.array([0, 0, 0]),translation = [0.05,0,0.25],resolution = (width, height))
 camera.camera.initialize()
 
 
 
+
+# VisualCuboid(prim_path="/World/camera_prim/base", color=np.array([0, 0, 255]))
+# camera_base = Asset("/World/camera_prim/base", rigid_prim = False)
+# camera_base.set_pose(translation=np.array([small_house_enu_coords[0,0], small_house_enu_coords[0,1],small_house_enu_coords[0,2]]), orientation = np.array([0,0,0]))
+
+
+
+
+# DynamicCuboid(prim_path="/World/camera_prim/middle", color=np.array([0, 0, 255]))
+# camera_middle = Asset("/World/camera_prim/middle", rigid_prim = True)
+# camera_middle.set_pose(translation=np.array([small_house_enu_coords[0,0], small_house_enu_coords[0,1],small_house_enu_coords[0,2]+1]), orientation = np.array([0,0,0]))
+# camera_middle.disable_gravity()
+
+
+
+# DynamicCuboid(prim_path="/World/camera_prim/child", color=np.array([0, 0, 255]))
+# camera_child = Asset("/World/camera_prim/child", rigid_prim = True)
+# camera_child.set_pose(translation=np.array([small_house_enu_coords[0,0], small_house_enu_coords[0,1],small_house_enu_coords[0,2]+2]), orientation = np.array([0,0,0]))
+# camera_child.disable_gravity()
+
+
+# joint_props = {'parent_position': Gf.Vec3f(0, 0, 1), 'child_position': Gf.Vec3f(0, 0, -1),
+#             'lower_limit': -45, 'upper_limit': 45,'max_force': 1000.0, 
+#             'target_velocity': 60.0, 'damping': 300.0, 'stiffness': 0.0,
+#             'revolution_axis': 'Z'}
+
+# camera_base.define_joint(enviorment.stage, joint_path = "/World/camera_prim/joints/base", connected_prim_path = camera_middle.prim_path, joint_props = joint_props)
+
+# joint_props = {'parent_position': Gf.Vec3f(0, 0.5, 1), 'child_position': Gf.Vec3f(0, 0.5, -1),
+#             'lower_limit': -180, 'upper_limit': 180,'max_force': 1000.0, 'target_velocity': 60.0,
+#             'damping': 300.0, 'stiffness': 0.0, 'revolution_axis': 'Y'}
+
+# camera_middle.define_joint(enviorment.stage, joint_path = "/World/camera_prim/joints/middle", connected_prim_path = camera_child.prim_path, joint_props = joint_props)
 
 
 
@@ -279,7 +266,6 @@ while simulation_app.is_running():
         # get pressed keys from the input manager and update the physics and camera
         pressed_keys = imgr.snapshot()
         mapping = imapper.calculate_mapping(pressed_keys)  # {'keyboard1': {'W','A',...}} -> {'throttle': 1.0, 'steering': -1.0, ...}
-        print(mapping)
 
         # update velocity, orientation for each assets (+zoom for camera)__________________________________________
         # update the velocity, orientation and zoom of the "camera" cube based on the pressed keys
@@ -287,7 +273,6 @@ while simulation_app.is_running():
         # camera_orientation = controller.update_orientation(mapping, 'camera')
         zoom_factor = controller.zoom_factor(mapping, 'camera')
         rot_flag = controller.rot_flag(mapping, 'camera')
-        print(rot_flag)
 
         #----------------------------------------------------------------------------
         # set the velocity, orientation and zoom of the "camera" cube
@@ -306,8 +291,8 @@ while simulation_app.is_running():
         angular_velocity_car1, linear_velocity_car1 = controller.get_velocity_parameters_spline_path(translation,current_heading_vector,spline_points_car1,spline_points_der_car1,'car1', kp = 200)
 
         # Set linear velocity to follow the tangent, and angular velocity to turn
-        car1.set_velocity_world(linear_velocity_car1)
-        car1.set_angular_velocity_world(np.array([0, 0, angular_velocity_car1])) # Use world frame for simplicity
+        car1.set_velocity(linear_velocity_car1, local = False)
+        car1.set_angular_velocity(np.array([0, 0, angular_velocity_car1]), local = False) # Use world frame for simplicity
 
         # Get the final velocity for your radar
         velocity = car1.get_linear_velocity(orientation)
@@ -329,9 +314,10 @@ while simulation_app.is_running():
         target = radar.check_if_targets_in_same_bin( [target], 'range')
 
                 # Spin at 30 deg/s (positive around the joint axis)
-        drive.GetTargetPositionAttr().Set(0.0)   # ignore position
-        drive.GetTargetVelocityAttr().Set(rot_flag[2] * 30.0)  # deg/s
-
+        drive_base.GetTargetPositionAttr().Set(0.0)   # ignore position
+        drive_base.GetTargetVelocityAttr().Set(rot_flag[2] * 60.0)  # deg/s
+        drive_middle.GetTargetPositionAttr().Set(0.0)   # ignore position
+        drive_middle.GetTargetVelocityAttr().Set(rot_flag[1] * 60.0)  # deg/s
 
 
         target = {k: np.concatenate([np.atleast_1d(d.get(k, [])).tolist() for d in target]) for k in set().union(*target)}

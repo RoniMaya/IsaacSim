@@ -51,12 +51,12 @@ devices:
           
           
           # --- cube2 movement (T/G forward/back, 7/9 yaw) ---
-          F: { <<: *car2, axis: "+Z" , key_stat:"held"}
-          V: { <<: *car2, axis: "-Z" , key_stat:"held"}
-          C: { <<: *car2, axis: "+Y" , key_stat:"held"}
-          B: { <<: *car2, axis: "-Y" , key_stat:"held"}
-          U: { <<: *car2, axis: "+PITCH" , key_stat:"held"}
-          J: { <<: *car2, axis: "-PITCH" , key_stat:"held"}
+          # U: { <<: *cube2, axis: "+Z" , key_stat:"held"}
+          # O: { <<: *cube2, axis: "-Z" , key_stat:"held"}
+          # L: { <<: *cube2, axis: "+Y" , key_stat:"held"}
+          # J: { <<: *cube2, axis: "-Y" , key_stat:"held"}
+          U: { <<: *car2, axis: "+X" , key_stat:"held"}
+          J: { <<: *car2, axis: "-X" , key_stat:"held"}
           "H": { <<: *car2, axis: "+YAW" , key_stat:"held"}
           "K": { <<: *car2, axis: "-YAW" , key_stat:"held"}
           "X": { <<: *car1, reset: "RESET" , key_stat:"held"}

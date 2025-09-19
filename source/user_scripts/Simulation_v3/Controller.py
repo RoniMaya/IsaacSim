@@ -13,6 +13,9 @@ class Controller():
 
     def rot_flag(self, mapping,key):
         return mapping[key]['rot_deg'] if key in mapping and 'rot_deg' in mapping[key] else [0,0,0]
+    
+    def choose_camera(self, mapping):
+        return mapping['asset'] if 'asset' in mapping else 'cam1'
 
 
 

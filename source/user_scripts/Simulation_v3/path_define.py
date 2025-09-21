@@ -2,7 +2,7 @@
 import os
 from pathlib import Path, PurePosixPath
 
-BASE = os.environ.get("OMNI_ASSETS").rstrip("/")
+BASE = os.environ.get("OMNI_ASSET_LOCAL").rstrip("/")
 
 def _is_omniverse(uri: str) -> bool:
     return uri.startswith("omniverse://")
@@ -29,8 +29,8 @@ STAGE_PATH_OGMAR         = apath("Ogmar80","odm_texturing", "odm_textured_model_
 STAGE_PATH_GAN_SHOMRON         = apath("Gan_Shomron","odm_texturing", "odm_textured_model_geo.usd")
 STAGE_PATH_TEL_KUDNA         = apath("Tel-Kudna-North-all","odm_texturing", "odm_textured_model_geo.usd")
 STAGE_PATH_LATRUN_2         = apath("latrun","Task-of-2025-09-17T174407524Z-all","odm_texturing", "odm_textured_model_geo.usd")
-STAGE_PATH_LATRUN_1       = apath("latrun","new_181Z", "latrun_try2.usd")
-STAGE_PATH_LATRUN_3       = apath("latrun","yahel-1692025-all","odm_texturing", "latrun_part_3_2.usd")
+STAGE_PATH_LATRUN_1       = apath("latrun","Task-of-2025-09-18T094825181Z-all", "odm_texturing", "odm_textured_model_geo.usd")
+STAGE_PATH_LATRUN_3       = apath("latrun","yahel-1692025-all","odm_texturing", "odm_textured_model_geo.usd")
 
 CAR_ORANGE_ASSET_PATH     = apath("car", "car_v7.usd")
 CAR_BLACK_ASSET_PATH     = apath("car", "car_v9_rough.usd")

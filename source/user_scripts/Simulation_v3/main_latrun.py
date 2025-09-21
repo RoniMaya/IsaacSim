@@ -95,24 +95,24 @@ spline_points_car1, spline_points_der_car1,euler_initial_angles_car1 = geojson_l
 
 
 utm_data_2 = Utils.open_coords_file(COORDINATES_LATRUN_2)
-geojson_loader2 = GeoJSONLoader(utm_data_2, 'camera_2',GEOJSON_LATRUN)
+geojson_loader2 = GeoJSONLoader(utm_data, 'camera_3',GEOJSON_LATRUN)
 camera2_location = geojson_loader2.lat_lon_to_enu()
 
 utm_data_3 = Utils.open_coords_file(COORDINATES_LATRUN_3)
-geojson_loader3 = GeoJSONLoader(utm_data_3, 'camera_3',GEOJSON_LATRUN)
-camera2_location = geojson_loader3.lat_lon_to_enu()
+# geojson_loader3 = GeoJSONLoader(utm_data_3, 'camera_3',GEOJSON_LATRUN)
+# camera2_location = geojson_loader3.lat_lon_to_enu()
 
 
 # utm_data_3 = Utils.open_coords_file(COORDINATES_LATRUN_3)
 # geojson_loader3 = GeoJSONLoader(utm_data, 'camera_2',GEOJSON_LATRUN)
 
 
-new_origin_21 = [12,-322,0]
-new_origin_31 = [54,-660,15]
+# new_origin_21 = [12,-322,0]
+# new_origin_31 = [28,-660,15]
 
-camera2_location = camera2_location[0][0:3] + new_origin_21
+# camera2_location = camera2_location[0][0:3] + new_origin_21
 
-camera2_location = [[camera2_location[0],camera2_location[1],camera2_location[2],1]]
+# camera2_location = [[camera2_location[0],camera2_location[1],camera2_location[2],1]]
 
 radar = Radar(RCS_FILE_PATH, RADAR_PROP_PATH, radar_origin=camera2_location[0])
 
@@ -165,23 +165,44 @@ def translate_terrain(terrain_path,new_origin):
     print("WORLD translate:", pos)
 
 
+def offset_from(base, target, z_bias=0.0):
+    dE = target['E'] - base['E']   # X
+    dN = target['N'] - base['N']   # Y
+    dZ = 0.0 + z_bias              # keep flat unless you measured a bias
+    return [dE, dN, dZ]
+
+# --- 2) Compute patch offsets *once* (relative to patch 1) ---
+
+utm1 = {'E': utm_data['lat'], 'N': utm_data['lon']}
+utm2 = {'E': utm_data_2['lat'], 'N': utm_data_2['lon']}
+utm3 = {'E': utm_data_3['lat'], 'N': utm_data_3['lon']}
+
+
+new_origin_1  = [0.0, 0.0, 0.0]
+new_origin_21 = offset_from(utm1, utm2)         # SecondTerrain relative to FirstTerrain
+new_origin_31 = offset_from(utm1, utm3)         # ThirdTerrain relative to FirstTerrain
+
+
+
 load_prim_with_collision(f'{STAGE_PATH_LATRUN_1}', "/World/Terrain/FirstTerrain")
 load_prim_with_collision(f'{STAGE_PATH_LATRUN_2}', "/World/Terrain/SecondTerrain")
 load_prim_with_collision(f'{STAGE_PATH_LATRUN_3}', "/World/Terrain/ThirdTerrain")
 
 
-# new_origin_21 = [utm_data['lat'] - utm_data_2['lat'], utm_data['lon'] - utm_data_2['lon'], 0]
-new_origin_21 = [12,-322,0]
+# new_origin_21 = [utm_data['lat'] - utm_data_2['lat'], -utm_data['lon'] + utm_data_2['lon'], 0]
+
+# new_origin_1 = [0,0, 3]
+translate_terrain("/World/Terrain/FirstTerrain",new_origin_1)
+
+# new_origin_21 = [utm_data['lat'] - utm_data_2['lat'], -utm_data['lon'] + utm_data_2['lon'], 0]
 translate_terrain("/World/Terrain/SecondTerrain",new_origin_21)
 
 
 
-# new_origin = [-geojson_loader.utm_data['lat'] +geojson_loader2.utm_data['lat'], -geojson_loader3.utm_data['lon'] + geojson_loader2.utm_data['lon'], 0]#[30,-400,0]#[-geojson_loader3.utm_data['lat'] + geojson_loader2.utm_data['lat'], -geojson_loader3.utm_data['lon'] + geojson_loader2.utm_data['lon'], 0]
-
-new_origin_31 = [40,-660,15]
-new_origin_31 = [28,-677,20]
-new_origin_31 = [54,-660,15]
-
+# new_origin_31 = [-utm_data['lat'] + utm_data_3['lat'], -utm_data['lon'] + utm_data_3['lon'], -13]
+# new_origin_31 = [40,-660,15]
+# new_origin_31 = [28,-677,20]
+# new_origin_31 = [54,-660,15]
 
 
 translate_terrain("/World/Terrain/ThirdTerrain",new_origin_31)

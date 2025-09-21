@@ -2,7 +2,7 @@
 import os
 from pathlib import Path, PurePosixPath
 
-BASE = os.environ.get("OMNI_ASSET_LOCAL").rstrip("/")
+BASE = os.environ.get("OMNI_ASSETS").rstrip("/")
 
 def _is_omniverse(uri: str) -> bool:
     return uri.startswith("omniverse://")
@@ -28,6 +28,10 @@ CFG_FILE           = apath("bindings_tgl.yaml")
 STAGE_PATH_OGMAR         = apath("Ogmar80","odm_texturing", "odm_textured_model_geo.usd")
 STAGE_PATH_GAN_SHOMRON         = apath("Gan_Shomron","odm_texturing", "odm_textured_model_geo.usd")
 STAGE_PATH_TEL_KUDNA         = apath("Tel-Kudna-North-all","odm_texturing", "odm_textured_model_geo.usd")
+STAGE_PATH_LATRUN_2         = apath("latrun","Task-of-2025-09-17T174407524Z-all","odm_texturing", "odm_textured_model_geo.usd")
+STAGE_PATH_LATRUN_1       = apath("latrun","new_181Z", "latrun_try2.usd")
+STAGE_PATH_LATRUN_3       = apath("latrun","yahel-1692025-all","odm_texturing", "latrun_part_3_2.usd")
+
 CAR_ORANGE_ASSET_PATH     = apath("car", "car_v7.usd")
 CAR_BLACK_ASSET_PATH     = apath("car", "car_v9_rough.usd")
 TEXTURE_SKY        = apath("sky_chat.png")
@@ -36,8 +40,14 @@ RCS_FILE_PATH      = apath("radar", "radar_rcs_maps", "rcs_ford_raptor_1.pkl")
 RADAR_PROP_PATH    = apath("radar", "MAGOS.yaml")
 COORDINATES_GS    = apath("Gan_Shomron", "odm_georeferencing","coords.txt")
 COORDINATES_TK    = apath("Tel-Kudna-North-all", "odm_georeferencing","coords.txt")
+COORDINATES_LATRUN_2    = apath("latrun","Task-of-2025-09-17T174407524Z-all", "odm_georeferencing","coords.txt")
+COORDINATES_LATRUN_1    = apath("latrun","Task-of-2025-09-18T094825181Z-all", "odm_georeferencing","coords.txt")
+COORDINATES_LATRUN_3    = apath("latrun","yahel-1692025-all", "odm_georeferencing","coords.txt")
+
 GEOJSON_GS    = apath("gs_coordinates")
 GEOJSON_TK    = apath("tk_coordinates")
+GEOJSON_LATRUN    = apath("latrun_coordinates")
+
 def validate_local_paths():
     """
     Optional: quick sanity check when using local filesystem.

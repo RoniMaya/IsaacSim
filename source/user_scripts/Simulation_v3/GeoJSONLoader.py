@@ -34,7 +34,7 @@ class GeoJSONLoader():
 
 
     def utm_to_latlon(self, utm_lat, utm_lon):
-        return utm.to_latlon(utm_lat, utm_lon, self.utm_data['projection'], self.utm_data['zone'])
+        return utm.to_latlon(utm_lat, utm_lon,  self.utm_data['zone_num'],self.utm_data['zone_letter'])
 
 
     def latlon_to_utm(self, lat, lon):

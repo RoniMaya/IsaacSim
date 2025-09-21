@@ -154,7 +154,7 @@ camera2.camera.initialize()
 asset = 'cam1'
 dt = 1.0 / physics_frequency
 restart_time = time.monotonic()
-old_orientation = np.array([0,0,0])
+old_orientation = np.array([0,90,0])
 
 while simulation_app.is_running():
     if world.is_playing():
@@ -166,7 +166,6 @@ while simulation_app.is_running():
         mapping = imapper.calculate_mapping(pressed_keys)  # {'keyboard1': {'W','A',...}} -> {'throttle': 1.0, 'steering': -1.0, ...}
         # update velocity, orientation for each assets (+zoom for camera)__________________________________________
         # update the velocity, orientation and zoom of the "camera" cube based on the pressed keys
-
         velocity_control = controller.update_velocity_direction(mapping, asset)
         # zoom_factor = controller.zoom_factor(mapping, asset)
 
@@ -196,9 +195,9 @@ while simulation_app.is_running():
 
         # Set linear velocity to follow the tangent, and angular velocity to turn
 
-        linear_velocity_car1 = velocity_control*100 if np.linalg.norm(velocity_control) > 0 else linear_velocity_car1
+        linear_velocity_car1 = velocity_control if np.linalg.norm(velocity_control) > 0 else linear_velocity_car1
         car1.set_velocity(linear_velocity_car1, local = False)
-        car1.set_angular_velocity(np.array([0, 0, angular_velocity_car1]), local = False) # Use world frame for simplicity
+        # car1.set_angular_velocity(np.array([0, 0, angular_velocity_car1]), local = False) # Use world frame for simplicity
 
 
 
@@ -217,7 +216,7 @@ while simulation_app.is_running():
             drive_base_cam2.GetTargetPositionAttr().Set(0.0)   # ignore position
             drive_base_cam2.GetTargetVelocityAttr().Set(rot_flag[2] * 50.0)  # deg/s
             drive_middle_cam2.GetTargetPositionAttr().Set(0.0)   # ignore position
-            drive_middle_cam2.GetTargetVelocityAttr().Set(-rot_flag[1] * 50.0)  # deg/s
+            drive_middle_cam2.GetTargetVelocityAttr().Set(rot_flag[1] * 50.0)  # deg/s
             camera2.zoom_camera(zoom_factor)
 
 

@@ -1,0 +1,70 @@
+schema: inputmap/simple-v1
+
+normalize:
+  keycase: upper
+
+profiles:
+  cam1: &cam1
+    target: cam1
+    speed: 60.0
+    frame: local
+    deg_s: 50
+    zoom_factor: 0.05
+
+  cam2: &cam2
+    target: cam2
+    speed: 60.0
+    frame: local
+    deg_s: 50
+    zoom_factor: 0.05
+
+  cam3: &cam3
+    target: cam3
+    speed: 60.0
+    frame: local
+    deg_s: 50
+    zoom_factor: 0.05
+
+  # virtual profile; your InputMapper will rewrite its "target" at runtime
+  camera_active: &camera_active
+    target: camera_active   # placeholder; will be replaced to cam1/cam2/cam3 at runtime
+    speed: 60.0
+    frame: local
+    deg_s: 50
+    zoom_factor: 0.05
+
+
+  car1: &car1
+    target: car1
+    speed: 20.0
+    frame: local
+    deg_s: 1
+
+
+
+devices:
+  keyboard1:
+    # movement controls always go to camera_active
+    Q: { <<: *camera_active, axis: "+Z",    key_stat: "held" }
+    E: { <<: *camera_active, axis: "-Z",    key_stat: "held" }
+    #D: { <<: *camera_active, axis: "-Y",    key_stat: "held" }
+    #A: { <<: *camera_active, axis: "+Y",    key_stat: "held" }
+    #S: { <<: *camera_active, axis: "-X",    key_stat: "held" }
+    #W: { <<: *camera_active, axis: "+X",    key_stat: "held" }
+    "4": { <<: *camera_active, axis: "+YAW",   key_stat: "held" }
+    "6": { <<: *camera_active, axis: "-YAW",   key_stat: "held" }
+    "5": { <<: *camera_active, axis: "+PITCH", key_stat: "held" }
+    "8": { <<: *camera_active, axis: "-PITCH", key_stat: "held" }
+    "7": { <<: *camera_active, axis: "+ROLL",  key_stat: "held" }
+    "9": { <<: *camera_active, axis: "-ROLL",  key_stat: "held" }
+    "-": { <<: *camera_active, zoom: "+ZOOM",  key_stat: "held" }
+    "+": { <<: *camera_active, zoom: "-ZOOM",  key_stat: "held" }
+
+    # camera selection (one-shot)
+    "1": { toggle: "cam1", key_stat: "pressed" }
+    "2": { toggle: "cam2", key_stat: "pressed" }
+    "3": { toggle: "cam3", key_stat: "pressed" }
+
+    X:  { <<: *camera_active, reset: "RESET", key_stat: "pressed" }
+
+

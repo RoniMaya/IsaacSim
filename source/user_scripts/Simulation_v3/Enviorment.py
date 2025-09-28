@@ -1,8 +1,7 @@
 
-from pxr import UsdLux, Gf
 import omni.kit.commands
 import omni.usd
-from pxr import UsdShade, Gf, UsdGeom, UsdLux, Sdf, UsdPhysics, PhysicsSchemaTools
+from pxr import UsdShade, Gf, UsdGeom, UsdLux, Sdf, UsdPhysics, PhysicsSchemaTools,Usd,UsdLux,Gf
 
 from omni.isaac.core.prims import GeometryPrim
 from omni.isaac.core.objects import FixedCuboid
@@ -14,13 +13,12 @@ import random
 import numpy as np
 
 class Enviorment():
-    def __init__(self, world,light_path, floor_path = None, texture_sky = None, light_intensity = 1000):
+    def __init__(self, stage_path, light_path, floor_path = None, texture_sky = None, light_intensity = 1000):
         """
         Initializes the class by retrieving the current USD stage from the Omniverse context and assigning it to the 'stage' attribute.
         """
-
-        self.stage = omni.usd.get_context().get_stage()
-        self.world = world
+        self.stage_path = stage_path
+        self.define_stage(stage_path)
         self.floor_path = floor_path
         self.light_path = light_path
         self.dome_light = UsdLux.DomeLight.Define(self.stage, light_path)
@@ -47,7 +45,14 @@ class Enviorment():
         scene.CreateGravityMagnitudeAttr().Set(gravity_magnitude)  # ~9.8 m/s^2, units are cm/s^2
 
 
-
+    def define_stage(self,stage_path):
+        omni.usd.get_context().new_stage()
+        self.stage = omni.usd.get_context().get_stage()
+        world_xf = UsdGeom.Xform.Define(self.stage, Sdf.Path(stage_path))
+        self.stage.SetDefaultPrim(world_xf.GetPrim())
+        UsdGeom.SetStageMetersPerUnit(self.stage, 1.0)             # meters
+        UsdGeom.SetStageUpAxis(self.stage, UsdGeom.Tokens.z)       # Z-up
+        UsdPhysics.Scene.Define(self.stage, Sdf.Path(f"{stage_path}/Physics"))
 
 
     def add_dome_light(self,light_path,intensity= 1500):
@@ -87,6 +92,26 @@ class Enviorment():
             self.dome_light.AddRotateYOp().Set(value)
         if key == 'Z':
             self.dome_light.AddRotateZOp().Set(value)
+
+
+
+    def load_prim_with_collision(self, terrain_path_to_load, terrain_path):
+        terrain_xf = UsdGeom.Xform.Define(self.stage, Sdf.Path(terrain_path))
+        terrain_prim = terrain_xf.GetPrim()
+        terrain_prim.GetReferences().AddReference(terrain_path_to_load)
+        UsdPhysics.CollisionAPI.Apply(terrain_prim)
+
+
+    def translate_terrain(self, terrain_path, new_origin):
+
+        prim = self.stage.GetPrimAtPath(terrain_path)
+        xf   = UsdGeom.Xformable(prim)
+        xf.SetResetXformStack(True)
+        xf.ClearXformOpOrder()
+        t = xf.AddTranslateOp(precision=UsdGeom.XformOp.PrecisionDouble)  # xformOp:translate
+        t.Set(Gf.Vec3d(float(new_origin[0]), float(new_origin[1]), float(new_origin[2])))
+        pos = xf.ComputeLocalToWorldTransform(Usd.TimeCode.Default()).ExtractTranslation()
+        print("WORLD translate:", pos)
 
         
 

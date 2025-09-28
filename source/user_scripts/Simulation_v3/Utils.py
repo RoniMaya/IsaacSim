@@ -184,9 +184,13 @@ def generate_spline_path_from_enu(waypoints, spline_param = 3, num_samples = 500
     tck, u = splprep([waypoints[:,0], waypoints[:,1], waypoints[:,2]], s=0, k=spline_param)
     spline_points_der = np.array(splev(np.linspace(0, 1, num_samples), tck, der = 1)).T
     spline_points = np.array(splev(np.linspace(0, 1, num_samples), tck)).T + np.array([0,0,add_z])
-    ini_dir = (spline_points[1] - spline_points[0])/np.linalg.norm(spline_points[1] - spline_points[0])
-    euler_initial_angles = np.arctan2(ini_dir[1], ini_dir[0])*180/np.pi
-    return spline_points,spline_points_der, euler_initial_angles
+    ini_dir = np.array([spline_points_der[0,0], spline_points_der[0,1], spline_points_der[0,2]])
+    ini_dir[:2] /= np.linalg.norm(ini_dir[:2])  # ignore z for heading
+    yaw_deg = np.degrees(np.arctan2(ini_dir[1], ini_dir[0]))
+
+    # ini_dir = (spline_points[1] - spline_points[0])/np.linalg.norm(spline_points[1] - spline_points[0])
+    # euler_initial_angles = np.arctan2(ini_dir[1], ini_dir[0])*180/np.pi
+    return spline_points,spline_points_der, yaw_deg
 
 
 

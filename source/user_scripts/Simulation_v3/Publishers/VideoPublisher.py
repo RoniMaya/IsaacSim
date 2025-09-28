@@ -40,6 +40,8 @@ class VideoPublisher():
             "-f", "rtsp", "-rtsp_transport", "tcp", # use RTSP protocol over TCP (more reliable than UDP).
             "rtsp://localhost:8554/mystream" # the RTSP server URL (make sure to match the server configuration).
         ]
+
+
         self.target_fps = target_fps
         self.height = height
         self.width = width

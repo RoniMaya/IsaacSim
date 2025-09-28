@@ -120,12 +120,15 @@ threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
 
 # Add env--------------------------------------------------------------------------------------------
 scale_axis = {asset_name:Utils.get_usd_props(asset_path) for asset_name, asset_path in zip([ car1_path],                                                                                            [ CAR_ORANGE_ASSET_PATH])}
-open_stage(stage_path)
+# open_stage(stage_path)
+enviorment = Enviorment(stage_path="/World", light_path="/World/sky/DomeLight", floor_path=None, texture_sky = TEXTURE_SKY, light_intensity = 1000)
+enviorment.load_prim_with_collision(f'{STAGE_PATH_GAN_SHOMRON}', "/World/odm_textured_model_geo")
 world = World()
-enviorment = Enviorment(world, light_path="/World/sky/DomeLight", floor_path="/World/odm_textured_model_geo", texture_sky = TEXTURE_SKY, light_intensity = 1000)
+
+
 radar.plot_radar_direction( enviorment.stage, prim_path=f"{radar_path}/radar_direction")
 radar2.plot_radar_direction( enviorment.stage, prim_path=f"{radar2_path}/radar2_direction")
-enviorment.set_gravity()
+enviorment.set_gravity(physics_path = f"/World/Physics")
 world.reset()
 
 
@@ -152,7 +155,7 @@ camera2.camera.initialize()
 
 # define car1
 car1 = Asset(car1_path, usd_load_path=CAR_ORANGE_ASSET_PATH, rigid_prim=True, scale=[scale_axis[car1_path][0]]*3)
-car1.set_pose(translation=np.array(spline_points_car1[0]), orientation = np.array([0,0,euler_initial_angles_car1]))
+car1.set_pose(translation=np.array(spline_points_car1[0]), orientation = np.array([0,0,euler_initial_angles_car1]), local = False)
 
 
 
@@ -205,9 +208,9 @@ while simulation_app.is_running():
         # Get the final velocity for your radar
         velocity = car1.get_linear_velocity(orientation)
     
-        if controller.reset_asset(mapping, 'car1') or now - restart_time  >= time_to_restart_scenario :
+        if controller.reset_asset(mapping, asset) or now - restart_time  >= time_to_restart_scenario :
             restart_time = now
-            car1.set_pose(translation=np.array(spline_points_car1[0]), orientation = np.array([0,0,euler_initial_angles_car1]))
+            car1.set_pose(translation=np.array(spline_points_car1[0]), orientation = np.array([0,0,euler_initial_angles_car1]), local = False )
 
         #___________________________________________________________________________________________________________
 

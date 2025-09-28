@@ -70,11 +70,11 @@ class Asset():
                 If None, the orientation remains unchanged. Defaults to None.
         """
         if orientation is not None:
-            orientation=rotations.euler_angles_to_quat(orientation)
+            orientation=rotations.euler_angles_to_quat(orientation*np.pi/180)
         if local == True:
             self.visual.set_local_pose(translation=translation, orientation=orientation)
         else:
-            self.visual.set_world_pose(translation=translation, orientation=orientation)
+            self.visual.set_world_pose(position=translation, orientation=orientation)
 
     def update_prim_scale(self, scale):
         """

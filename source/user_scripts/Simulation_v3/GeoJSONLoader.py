@@ -25,6 +25,8 @@ class GeoJSONLoader():
         self.name = geojson_data['features'][0]['properties']['Name']
         self.color = geojson_data['features'][0]['properties']['Color']
         self.elevation = geojson_data['features'][0]['properties'].get('Elevation', 10000)
+        if self.elevation is None:
+            self.elevation = 10000
 
 
         coordinates =np.fliplr(np.atleast_2d(geojson_data['features'][0]['geometry']['coordinates']))

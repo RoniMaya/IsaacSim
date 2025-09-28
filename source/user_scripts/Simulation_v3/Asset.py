@@ -12,6 +12,8 @@ import numpy as np
 import Utils
 from scipy.spatial.transform import Rotation as R
 from isaacsim.core.utils import rotations
+from isaacsim.core.api.objects import DynamicCuboid, VisualCuboid, DynamicCylinder
+from CameraClass import CameraClass
 
 
 
@@ -127,4 +129,13 @@ class Asset():
         # Get the direction the car's front is pointing
         current_heading_vector = current_rot.apply([1, 0, 0])
         return current_heading_vector
+
+
+    def add_camera(self,width, height):
+        camera = CameraClass(prim_path = f"{self.prim_path}/sensors/camera",orientation = np.array([0, 90, 0]),translation = [0,0,-1],resolution = (width, height))
+        camera.camera.initialize()
+        return camera
+
+
+
 

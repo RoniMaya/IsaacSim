@@ -20,7 +20,6 @@ from omni.isaac.core.objects import DynamicCuboid
 from omni.isaac.sensor import Camera
 import omni.kit.commands
 import Utils
-from Asset import Asset
 from isaacsim.core.api.objects import DynamicCuboid, VisualCuboid, DynamicCylinder
 
 

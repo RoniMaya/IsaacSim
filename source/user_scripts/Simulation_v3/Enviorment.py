@@ -23,11 +23,15 @@ class Enviorment():
         self.light_path = light_path
         self.dome_light = UsdLux.DomeLight.Define(self.stage, light_path)
         self.dome_light.GetIntensityAttr().Set(light_intensity)
+
         if floor_path is not None:
             self.add_colision_to_prim(floor_path)
+
         if texture_sky is not None:
             self.dome_light.GetTextureFileAttr().Set(texture_sky)
-
+            dome_light_prim = self.stage.GetPrimAtPath(light_path)
+            texture_format_attr = dome_light_prim.GetAttribute("inputs:texture:format")
+            texture_format_attr.Set("latlong")
 
     def add_colision_to_prim(self,parent_prim_path):
         # Apply a single, aggregated collider to the parent

@@ -249,5 +249,32 @@ def overlay_polar_inset(frame_rgba, az_deg, r_m, snr=None, r_max=300, pos=(20, 2
     return np.asarray(base)
 
 
+def record_to_EN(rec):
+    # Your records are already UTM (meters), just badly named.
+    E = float(rec['lat'])  # actually Easting
+    N = float(rec['lon'])  # actually Northing
+    return E, N
+
+def new_origin_of_part(origin_utm, origin_utm_piece2):
+    e1, n1 = record_to_EN(origin_utm)
+    e2, n2 = record_to_EN(origin_utm_piece2)
+    return [e2 - e1, n2 - n1, 0.0]
 
 
+
+
+def add_curve_to_stage(stage, spline_points_primiter,color,path="/World/BaseBorder", curve_type = "linear", closed_curve = "periodic"):
+    """Add a spline curve to the USD stage.
+
+    Args:
+        enviorment: The environment object containing the USD stage.
+        spline_points_primiter: The points defining the spline curve.
+    """
+
+    curve = UsdGeom.BasisCurves.Define(stage, path)
+    curve.CreatePointsAttr([Gf.Vec3f(*c) for c in spline_points_primiter])
+    curve.CreateCurveVertexCountsAttr([len(spline_points_primiter)])
+    curve.CreateTypeAttr(curve_type)  # straight segments
+    curve.CreateWidthsAttr([1.0])  # line thickness in viewport
+    curve.CreateWrapAttr().Set(closed_curve)
+    UsdGeom.Gprim(curve.GetPrim()).CreateDisplayColorAttr(color)

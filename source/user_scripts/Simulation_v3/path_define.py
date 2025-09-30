@@ -39,7 +39,7 @@ WHITE_TOYOTA     = apath("assets","White_Pickup_Truck_0920164041_texture_obj", "
 TANK     = apath("assets","tank", "tank.usd")
 MEHOLA     = apath("assets","mehola","clean_cargo","mehola2.usd")
 HAMAS = apath("assets","soldiers","hamas.usd")
-
+RADAR = apath("assets","radar","radar_cam.usd")
 
 TEXTURE_SKY        = apath("assets","sky","sky_4.png")
 CESIUM_TRANSFORM   = apath("ogmar", "conf.JSON")

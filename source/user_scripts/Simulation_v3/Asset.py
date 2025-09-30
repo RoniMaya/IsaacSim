@@ -25,10 +25,14 @@ class Asset():
         self.visual = XFormPrim(prim_path,scale = scale)
         self.prim_path = prim_path
 
+        if rigid_prim == True:
+            UsdPhysics.RigidBodyAPI.Apply(self.visual.prim)
+
         if usd_load_path is not None:
             self.visual.prim.GetReferences().AddReference(assetPath=usd_load_path)
-            mesh_prims = self.get_mesh_children()
-            [self.apply_collision(prim) for prim in mesh_prims]
+            if rigid_prim == True:
+                mesh_prims = self.get_mesh_children()
+                [self.apply_collision(prim) for prim in mesh_prims]
 
         self.rigid = RigidPrim(prim_path) if rigid_prim == True else None
         self.geometry = GeometryPrim(prim_path) if geometry_prim == True else None
@@ -131,8 +135,9 @@ class Asset():
         return current_heading_vector
 
 
-    def add_camera(self,width, height,orientation= np.array([0, 90, 0])):
-        camera = CameraClass(prim_path = f"{self.prim_path}/sensors/camera",orientation = orientation,translation = [0,0,-1],resolution = (width, height))
+    def add_camera(self,width, height,orientation= np.array([0, 90, 0]), translation = np.array([0,0,0])):
+        camera = CameraClass(prim_path = f"{self.prim_path}/sensors/camera",
+        orientation = orientation,translation = translation,resolution = (width, height))
         camera.camera.initialize()
         return camera
 

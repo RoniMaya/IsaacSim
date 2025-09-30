@@ -18,12 +18,15 @@ print("NumPy:", np.__version__, "SciPy:", scipy.__version__)
 class Radar:
 
     def __init__(self, rcs_file_path, radar_prop_path,radar_origin, 
-                   det_per_sec = 1,  cesium_transformation = None):
+                   det_per_sec = 1,  radar_angle = None):
         self.rcs_file_path = rcs_file_path
         self.speed_of_light = 299792458.0  # m/s
         self.radar_origin = radar_origin[0:3]
         self.load_radar_properties(radar_prop_path)
+        if radar_angle != None:
+            self.radar_angle = radar_angle 
         self.radar_rotation = self.define_rotation(self.radar_angle) # defines rotation of radar to world FoR
+        self.radar_properties['azimuth'], self.radar_properties['elevation'], self.radar_properties['fwd_radar'] = self.calculate_az_el_fwd()
 
 
         self.load_rcs_data()
@@ -31,6 +34,7 @@ class Radar:
         self.time_between_detections = 1.0 / det_per_sec
 
         self.lat0_deg, self.lon0_deg = self.radar_properties['lat'] ,self.radar_properties['lon']
+        
     def sample_from_rcs(self):
         pt = np.array([self.total_az, self.total_el])
         return float(self._rcs_interp(pt))
@@ -296,14 +300,14 @@ class Radar:
         winners = [random.choice(cand_list) for cand_list in dict_bins.values()]
         return no_bins + winners
 
-    def plot_radar_direction(self, stage, prim_path):
+    def plot_radar_direction(self, stage, prim_path, width = 0.2, color = (0.0,1.0,0.0)):
 
         curves = UsdGeom.BasisCurves.Define(stage, prim_path)
         curves.CreateTypeAttr("linear")
         curves.CreateCurveVertexCountsAttr([2])
         curves.CreatePointsAttr([self.radar_origin, self.radar_origin + self.radar_properties['fwd_radar'] * self.radar_properties['r_max']])
-        curves.CreateWidthsAttr([0.2])
-        UsdGeom.Gprim(curves.GetPrim()).CreateDisplayColorAttr([Gf.Vec3f(0.0,1.0,0.0)])  # green
+        curves.CreateWidthsAttr([width])
+        UsdGeom.Gprim(curves.GetPrim()).CreateDisplayColorAttr([Gf.Vec3f(*color)])
 
 
 

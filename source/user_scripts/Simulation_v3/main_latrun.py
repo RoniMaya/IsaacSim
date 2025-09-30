@@ -46,7 +46,7 @@ from PolarPlotReusable import PolarPlotReusable
 
 from path_define import (
     CFG_FILE, STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON,STAGE_PATH_TEL_KUDNA,STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2, STAGE_PATH_LATRUN_3, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH,
-    TEXTURE_SKY, CESIUM_TRANSFORM,WHITE_TOYOTA,TANK,
+    TEXTURE_SKY, CESIUM_TRANSFORM,WHITE_TOYOTA,TANK,MEHOLA,STAGE_PATH_LATRUN_4,STAGE_PATH_LATRUN_4,COORDINATES_LATRUN_4,HAMAS,
     RCS_FILE_PATH, RADAR_PROP_PATH, COORDINATES_GS,COORDINATES_TK,COORDINATES_LATRUN_1,COORDINATES_LATRUN_2,COORDINATES_LATRUN_3, GEOJSON_GS, GEOJSON_TK, GEOJSON_LATRUN
 )
 
@@ -54,32 +54,47 @@ print("Paths:", STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON, STAGE_PATH_TEL_KUDNA, 
 
 
 
-def define_ptz_cam(camera_path, camera_height, poi_points, world, enviorment, width, height, camera_name):
-    camera_location = np.vstack(geo_json_loader.get_collisions( world, poi_points[camera_name]))
-    drive_base_cam, drive_middle_cam = ptz.create_ptz_camera(enviorment.stage, prim_path = camera_path, 
-                            translation = np.array([camera_location[0,0], camera_location[0,1],camera_location[0,2]+camera_height]))
-    camera = CameraClass(prim_path = f"{camera_path}/child/camera",orientation = np.array([0, 0, 180]),translation = [0.05,0,0.25],resolution = (width, height))
-    camera.camera.initialize()
-    return drive_base_cam, drive_middle_cam, camera
+# def define_ptz_cam(camera_path, poi_points, enviorment, width, height, camera_name, camera_height,orientation_base=  [0,0,0]):
+#     camera_location = np.vstack(Utils.get_collisions(  poi_points[camera_name],height = camera_height))
+#     drive_base_cam, drive_middle_cam = ptz.create_ptz_camera(enviorment.stage, prim_path = camera_path, 
+#                             translation = np.array([camera_location[0,0], camera_location[0,1],camera_location[0,2]]),
+#                             orientation_base = orientation_base)
+#     camera = CameraClass(prim_path = f"{camera_path}/child/camera",orientation = np.array([0,0,0]),translation = [0.05,0,0.25],resolution = (width, height))
+#     camera.camera.initialize()
+#     return drive_base_cam, drive_middle_cam, camera
 
 
-def generate_asset_in_position(geo_json_loader,asset_path,usd_load_path, world, splines,scale = 2, height=0):
+def spawn_spline_asset(asset_path,usd_load_path, splines,scale = 2, height=0):
     asset = Asset(asset_path, usd_load_path=usd_load_path, rigid_prim=True, scale=[scale]*3)
-    # asset.generate_asset_in_position( geo_json_loader, world, splines, height=height)
-    spline_points_toyota = np.vstack(geo_json_loader.get_collisions( world, splines['spline_points']))
-    spline_points_toyota[:,2] = spline_points_toyota[:,2] + height
+    spline_points_toyota = np.vstack(Utils.get_collisions(  splines['spline_points'],height= height))
     asset.set_pose(translation=np.array(spline_points_toyota[0]), orientation = np.array([0,0,splines['euler_initial_angles']]),local = False)
     return asset
 
 
-def generate_flying_cube( drone_path,  splines, width, height):
-    DynamicCuboid(prim_path=f"{drone_path}", color=np.array([0, 255, 0]))
-    drone = Asset(drone_path, rigid_prim=True)
-    drone.set_pose(translation=np.array(splines['spline_points'][0]), orientation = np.array([0,0,splines['euler_initial_angles']]),local = False)
-    drone.disable_gravity()
+def spawn_asset_in_position(asset_path,usd_load_path, poi_points,asset_name,scale = 2, height=0,orientation = 0):
+    asset = Asset(asset_path, usd_load_path=usd_load_path, rigid_prim=True, scale=[scale]*3)
+    spline_points_primiter = np.vstack(Utils.get_collisions(  poi_points[asset_name],height = height))
+    asset.set_pose(translation=np.array(spline_points_primiter[0][0:3]), orientation = np.array([0,0,orientation]),local = False)
+    return asset
 
+
+def define_ptz_camera( drone_path, width, height, translation,orientation,usd_load_path = None):
+    if usd_load_path is None:
+        DynamicCuboid(prim_path=f"{drone_path}", color=np.array([0, 255, 0]))
+    drone = Asset(drone_path, rigid_prim=True, usd_load_path = usd_load_path)
+    drone.set_pose(translation=translation, orientation=orientation, local=False)
+    drone.disable_gravity()
     camera = drone.add_camera(width, height)
     return camera, drone
+
+# def define_ptz_camera(cam_path, asset, height_poi,poi_points, orientation= np.array([0,0,0])):
+#     DynamicCuboid(prim_path=f"{cam_path}", color=np.array([0, 255, 0]))
+#     camera_cube = Asset(cam_path, rigid_prim=True)
+#     camera_cube.set_pose(translation=np.array([poi_points[asset][0][0],poi_points[asset][0][1],poi_points[asset][0][2] + height_poi[asset]]), orientation = np.array([0,0,180]),local = False)
+#     camera_cube.disable_gravity()
+#     camera = camera_cube.add_camera(width, height,orientation = orientation)
+#     return camera,camera_cube
+
 
 # need to add position in POI
 
@@ -96,6 +111,21 @@ def time_tick_spline_asset(asset,asset_name,splines,controller,velocity_control)
     return translation_asset, orientation_asset
 
 
+def poi_with_collision(poi_points):
+    point_with_collision = np.vstack(Utils.get_collisions(  poi_points))
+    return point_with_collision
+
+
+def update_camera_orientation(mapping, asset,dt,old_orientation, pitch =True):    
+    camera_orientation = controller.update_orientation(mapping, asset)
+    camera_orientation = old_orientation+camera_orientation*dt
+    old_orientation = camera_orientation.copy()
+
+    return camera_orientation,old_orientation
+
+
+
+
 if __name__ == "__main__":
 
 
@@ -106,8 +136,6 @@ if __name__ == "__main__":
     detection_frequency = 1  # Hz
     frame_count = 0
     passed_time = 0
-    hight_drone = 400
-    hight_toyota_0 = 0.5
     time_to_restart_scenario = 60*2
     camera_height = 5
     last_time = time.monotonic()
@@ -117,30 +145,43 @@ if __name__ == "__main__":
     render_every_n_frame = int(physics_frequency / rendering_frequency)
     text_for_image = {}
     show_pd_real_target = False
-    polar_plot = PolarPlotReusable(size=(220,220), r_max=400)
+    polar_plot_radar2 = PolarPlotReusable(size=(220,220), r_max=400,color = 'g')
     time_to_wait_physics = 1.0 / physics_frequency
     coords_path = COORDINATES_LATRUN_1
     stage_path = STAGE_PATH_LATRUN_1
 
-    stage_file_path = [STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2,STAGE_PATH_LATRUN_3]
+    stage_file_path = [STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2,STAGE_PATH_LATRUN_3,STAGE_PATH_LATRUN_4]
+    geo_coordinates_stage = [COORDINATES_LATRUN_1,COORDINATES_LATRUN_2,COORDINATES_LATRUN_3,COORDINATES_LATRUN_4]
 
+
+
+    ptz_dict = {f'CamEast' : {'path':f"/World/CamEast_prim", 'rotation': [0,0,0], 'radar_angle':[0,90,0],
+                               'radar_path':f"/World/radar0",'color':(0.0,1.0,0.0),'radar_plot': PolarPlotReusable(size=(220,220), r_max=400,color = 'g')}}  # define the ptz cameras dictionary
+    ptz_dict.update({f'CamWest' : {'path':f"/World/CamWest_prim", 'rotation': [0,0,180],
+                                    'radar_angle':[0,90,180], 'radar_path':f"/World/radar1",'color':(1.0,0.0,0.0), 'radar_plot':PolarPlotReusable(size=(220,220), r_max=400)}})  # define the ptz cameras dictionary
+    ptz_dict.update({f'CamNorth' : {'path':f"/World/CamNorth_prim", 'rotation': [0,0,90],
+                                    'radar_angle':[0,90,-90], 'radar_path':f"/World/radar2",'color':(0.0,0.0,1.0), 'radar_plot':PolarPlotReusable(size=(220,220), r_max=400,color = 'b')}})  # define the ptz cameras dictionary
+
+
+
+    ptz_cams = list(ptz_dict.keys())
+
+    poi_geofile = ptz_cams + ['perimeter_part','tank','tank2','mehola']
+    height_poi = {'CamEast': 2, 'CamWest': 2,'CamNorth': 2, 'perimeter_part': 1, 'tank': 2, 'drone': 400, 'toyota': 0,'tank2': 2,'mehola':0, 'hamas': 0}
+    geo_spline_names = ['logistics_part','drone_part','hamas']
+    assets_names = ['toyota','drone','hamas','tank','tank2','mehola']
 
     drone_path = "/World/drone"
     camera_path = "/World/camera_prim"
-    camera2_path = "/World/camera2_prim"
-    camera3_path = "/World/camera3_prim"
-    ptz_dict = {'cam2':[camera2_path,'CamWest'], 'cam3': [camera3_path, 'CamEast']}
-
-    radar_path = "/World/radar"
+    cameras_path = [f"/World/{camera_name}_prim" for camera_name in ptz_cams]
     toyota_path  = "/World/vehicles/toyota"
     tank_path = "/World/vehicles/tank"
+    tank2_path = "/World/vehicles/tank2"
+    mehola_path = "/World/mehola"
+    hamas_path = "/World/soldiers/hamas"
 
-
-    terrain_list = [f"/World/Terrain/Terrain_{i}" for i in range(len(stage_file_path))]
-    utm_data = [Utils.open_coords_file(utm_data_piece) for utm_data_piece in [COORDINATES_LATRUN_1,COORDINATES_LATRUN_2,COORDINATES_LATRUN_3]]
-    poi = ['CamEast','CamWest','perimeter_part']
-    asset_paths_names = ['logistics_part','drone_part']
-    assets_names = ['toyota','drone']
+    terrain_list = [f"/World/Terrain/Terrain_{i}" for i in range(len(stage_file_path))] # define the terrain paths
+    utm_data = [Utils.open_coords_file(utm_data_piece) for utm_data_piece in geo_coordinates_stage] # load the UTM data for each stage
 
 
     imgr = InputManager()
@@ -151,17 +192,15 @@ if __name__ == "__main__":
     mqtt_properties = {'mqtt_host': '127.0.0.1','mqtt_port': 1883,'mqtt_topic': '/device/magos/magos-service/platform/',
     'mqtt_qos': 0,'mqtt_retain': False, 'client_id': "radar_publisher"}
 
-    # load assets locations and paths
-    asset_paths_objects = [GeoJSONLoader(utm_data[0], asset_path,GEOJSON_LATRUN) for asset_path in asset_paths_names]
-    splines = {asset_name:path_object.spline_dict() for path_object,asset_name in zip(asset_paths_objects,assets_names)}
-    poi_objects = [GeoJSONLoader(utm_data[0], poi_name,GEOJSON_LATRUN) for poi_name in poi]
-    poi_points = {poi_name:poi_object.lat_lon_to_enu() for poi_object,poi_name in zip(poi_objects,poi)}
-    geo_json_loader = GeoJSONLoader(utm_data[0], poi[0],GEOJSON_LATRUN)
-    splines['drone']['spline_points'][:,2] = splines['drone']['spline_points'][:,2]*0 + hight_drone
+    
+    asset_paths_objects = [GeoJSONLoader(utm_data[0], asset_path,GEOJSON_LATRUN) for asset_path in geo_spline_names] # load assets locations and paths
+    splines = {asset_name:path_object.spline_dict() for path_object,asset_name in zip(asset_paths_objects,assets_names)} # create splines for each asset
+    splines['drone']['spline_points'][:,2] = splines['drone']['spline_points'][:,2]*0 + height_poi['drone'] # set the drone height
 
+    poi_objects = [GeoJSONLoader(utm_data[0], poi_name,GEOJSON_LATRUN) for poi_name in poi_geofile] # define the points of interest objects
+    poi_points = {poi_name:poi_object.lat_lon_to_enu() for poi_object,poi_name in zip(poi_objects,poi_geofile)} # convert the points of interest to ENU coordinates per asset (not spline)
 
-    # load radar
-    radar = Radar(RCS_FILE_PATH, RADAR_PROP_PATH, radar_origin=poi_points['CamWest'][0,0:3])
+    # load radar    # radar = Radar(RCS_FILE_PATH, RADAR_PROP_PATH, radar_origin=poi_points['CamWest'][0,0:3])
 
 
     # Start background threads -----------------------------------------------------------
@@ -170,12 +209,9 @@ if __name__ == "__main__":
     video_rb = RingBuffer(capacity=8, drop_policy="latest")
     VideoPublisher(video_rb, width=width, height=height, target_fps=rendering_frequency)  # starts its own thread
 
-    radar_rb = RingBuffer(capacity=512, drop_policy="latest")
-    radar_pub = DetectionPublisherMQTT(radar_rb, radar.radar_properties, target_fps=1,mqtt_properties = mqtt_properties)
-    threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
 
 
-    scale_axis = {asset_name:Utils.get_usd_props(asset_path) for asset_name, asset_path in zip([ toyota_path,tank_path],[ WHITE_TOYOTA, TANK])}
+    scale_axis = {asset_name:Utils.get_usd_props(asset_path) for asset_name, asset_path in zip([ toyota_path,tank_path],[WHITE_TOYOTA, TANK])}
 
 
     # load enviorment
@@ -184,46 +220,58 @@ if __name__ == "__main__":
     [enviorment.load_prim_with_collision(f'{file_path}', stage_path) for file_path,stage_path in zip(stage_file_path, terrain_list)]
     [enviorment.translate_terrain(terrain, origin) for terrain,origin in zip(terrain_list[1:],new_origins)]
     enviorment.set_gravity(physics_path = "/World/Physics")
+    
+
     world = World()
     world.reset()
 
 
 
-    toyota = generate_asset_in_position(geo_json_loader,toyota_path,WHITE_TOYOTA, world, splines['toyota'],scale = 2, height=0)
-    drone_camera, drone = generate_flying_cube( drone_path, splines['drone'], width, height)
+    poi_points = {point_name:Utils.get_collisions(point_value,height = height_poi[point_name]) for point_name,point_value in poi_points.items()}
+    radars = {ptz_name: None for ptz_name in ptz_cams}
+    for ptz_name in ptz_cams:
+        radars[ptz_name] = Radar(RCS_FILE_PATH, RADAR_PROP_PATH, radar_origin=poi_points[ptz_name][0][0:3], radar_angle= ptz_dict[ptz_name]['radar_angle'])
 
-
-    spline_assets = { 'toyota': toyota, 'drone': drone }
-
-
-    ptz_cams = {cam_number : define_ptz_cam(cam_val[0], camera_height, poi_points, world, enviorment, width, height, cam_val[1]) for cam_number,cam_val  in ptz_dict.items()}
-
-
-
-    spline_points_drone = splines['drone']['spline_points'][:,0:3]
-    spline_points_der_drone = splines['drone']['spline_points_der']
-    euler_initial_angles_drone = splines['drone']['euler_initial_angles']
-
-
-    spline_points_der_toyota = splines['toyota']['spline_points_der']
-    euler_initial_angles_toyota = splines['toyota']['euler_initial_angles']
-    spline_points_toyota = splines['toyota']['spline_points'][:,0:3]
+    radar_rb = RingBuffer(capacity=512, drop_policy="latest")
+    radar_pub = DetectionPublisherMQTT(radar_rb, list(radars.values())[0].radar_properties, target_fps=1,mqtt_properties = mqtt_properties)
+    threading.Thread(target=radar_pub.mqtt_publish, daemon=True).start()
+    [radar.plot_radar_direction( enviorment.stage, prim_path=f"{ptz_dict[ptz_name]['radar_path']}/radar{idx}_direction", width = 0.2, color=ptz_dict[ptz_name]['color']) for idx, (radar, ptz_name) in enumerate(zip(radars.values(), ptz_cams))]
 
 
 
+    toyota = spawn_spline_asset(toyota_path,WHITE_TOYOTA, splines['toyota'],scale = 2, height=height_poi['toyota'])
 
 
-    # Create the curve prim
-    spline_points_primiter = np.vstack(geo_json_loader.get_collisions( world, poi_points['perimeter_part'][:,0:3]))
-    spline_points_primiter[:,2] = spline_points_primiter[:,2] + 2
+    DynamicCuboid(prim_path=f"{hamas_path}", color=np.array([0, 255, 0]))
+    hamas = spawn_spline_asset(hamas_path,None, splines['hamas'],scale = 1, height=height_poi['hamas'])
+    splines['hamas']['spline_points'][:,2] = splines['hamas']['spline_points'][:,2] + 2 # set the hamas height
 
-    spline_points_primiter2 = spline_points_primiter.copy()
-    spline_points_primiter2[:,2] = spline_points_primiter2[:,2] + 4
+    # hamas.disable_gravity()
+
+    drone_camera, drone = define_ptz_camera( drone_path, width, height,np.array(splines['drone']['spline_points'][0]), np.array([0,0,splines['drone']['euler_initial_angles']],),usd_load_path=None)
 
 
-    Utils.add_curve_to_stage(enviorment.stage, spline_points_primiter,path='/World/BaseBorder_down',color=[Gf.Vec3f(1.0, 0.2, 0.2)])
-    Utils.add_curve_to_stage(enviorment.stage, spline_points_primiter2,path='/World/BaseBorder_up',color=[Gf.Vec3f(0.0, 1.2, 0.2)])
+    spawn_asset_in_position( tank_path, TANK, poi_points, 'tank', scale=4, height=height_poi['tank'])
+    spawn_asset_in_position( tank2_path, TANK, poi_points, 'tank2', scale=4, height=height_poi['tank2'])
+    spawn_asset_in_position( mehola_path, MEHOLA, poi_points, 'mehola', scale=5, height=height_poi['mehola'])
 
+    spline_assets = { 'toyota': toyota, 'drone': drone , 'hamas': hamas }
+
+
+
+
+
+    Utils.add_curve_to_stage(enviorment.stage, np.vstack(poi_points['perimeter_part'])[:,0:3],
+                             path='/World/BaseBorder_down',color=[Gf.Vec3f(0.1, 0.2, 0.5)],width = 0.5)
+
+
+
+    Utils.add_curve_to_stage(enviorment.stage, np.vstack(splines['hamas']['spline_points'])[:,0:3],
+                             path='/World/hamas_spline',color=[Gf.Vec3f(0.1, 0.2, 0.5)],width = 0.5)
+
+
+    ptz_cams = {cam_name:  define_ptz_camera(cam_path, width, height,translation = np.array([poi_points[cam_name][0][0],poi_points[cam_name][0][1],poi_points[cam_name][0][2] + height_poi[cam_name]]), orientation= np.array([0,0,ptz_dict[cam_name]['rotation'][2]]),usd_load_path = HAMAS) for cam_name,cam_path  in zip(ptz_cams, cameras_path)}
+    [ptz_cams[asset][0].transform_camera([0,0,0],[0,0,0]) for asset in ptz_cams.keys()]
 
 
 
@@ -247,39 +295,69 @@ if __name__ == "__main__":
             # update velocity, orientation for each assets (+zoom for camera)__________________________________________
             # update the velocity, orientation and zoom of the "camera" cube based on the pressed keys
             velocity_control = controller.update_velocity_direction(mapping, asset)
-            camera_orientation = controller.update_orientation(mapping, asset)
-            camera_orientation = old_orientation+camera_orientation*dt
-            old_orientation = camera_orientation.copy()
-
 
             asset = imapper.active_camera_target
-            zoom_factor = controller.zoom_factor(mapping, asset)
-            rot_flag = controller.rot_flag(mapping, asset)
-            drone_camera.zoom_camera(zoom_factor)
+
+            if asset not in ptz_dict:
+                camera_orientation,old_orientation = update_camera_orientation(mapping, asset,dt,old_orientation)
+                zoom_factor = controller.zoom_factor(mapping, asset)
+                drone_camera.zoom_camera(zoom_factor)
+                drone_camera.transform_camera(camera_orientation,[0,0,0])
+
+                    
+
+                camera_orientation = controller.update_orientation(mapping, asset)
+                camera_orientation = old_orientation+camera_orientation*dt
+                old_orientation = camera_orientation.copy()
+                zoom_factor = controller.zoom_factor(mapping, asset)
+                drone_camera.zoom_camera(zoom_factor)
+                drone_camera.transform_camera(camera_orientation,[0,0,0])
+
+            if asset in ptz_dict:
+                camera_orientation,old_orientation_ptz = update_camera_orientation(mapping, asset,dt,ptz_dict[asset]['rotation'])
+                ptz_dict[asset]['rotation'] = old_orientation_ptz
+                zoom_factor = controller.zoom_factor(mapping, asset)
+                ptz_cams[asset][0].zoom_camera(zoom_factor)
+                ptz_cams[asset][0].transform_camera([0,camera_orientation[1],0],[0,0,0])
+
+                # camera_orientation = controller.update_orientation(mapping, asset)
+                # camera_orientation = old_orientation_ptz+camera_orientation*dt
+                # old_orientation_ptz = camera_orientation.copy()
+
+                #----------------------------------------------------------------------------
+                # set the velocity, orientation and zoom of the "camera" cube
+                translation, orientation = ptz_cams[asset][1].get_position_and_orientation()
+                camera_orientation_kb = controller.update_orientation(mapping, asset)
+                ptz_cams[asset][1].set_angular_velocity([np.array([0,0,camera_orientation_kb[2]/15])], orientation)
+                # camera_test.transform_camera([0,camera_orientation[1]*10,0],[0,0,0])
+
+
+
+                # rot_flag = controller.rot_flag(mapping, asset)
+
+                # # ptz_cams[asset][0].GetTargetPositionAttr().Set(ptz_dict[asset]['rotation'][2])   # ignore position
+                # ptz_cams[asset][0].GetTargetVelocityAttr().Set(rot_flag[2] * 50.0)  # deg/s
+                # # ptz_cams[asset][1].GetTargetPositionAttr().Set(ptz_dict[asset]['rotation'][2])   # ignore position
+                # ptz_cams[asset][1].GetTargetVelocityAttr().Set(rot_flag[1] * 50.0)  # deg/s
+                # ptz_cams[asset][2].zoom_camera(zoom_factor)
+                target, false_alarm = radars[asset].get_detections(translation_toyota, orientation_toyota, velocity, target_id = "toyota")
+                target = radars[asset].check_if_targets_in_same_bin( [target], 'range')
+                target = {k: np.concatenate([np.atleast_1d(d.get(k, [])).tolist() for d in target]) for k in set().union(*target)}
+                detection = {"seq": frame_count, "time": round(time.time(),2)} | {key:np.hstack((target[key], false_alarm[key])).tolist() for key in target.keys()}
+                radar_rb.push(detection) # update the radar detection ring buffer
+
+
+
             #-------------------------------------------------------------------------
             # update the velocity, orientation and zoom of the "camera" cube based on the pressed keys
 
 
             time_tick_spline_asset(spline_assets['drone'],'drone',splines,controller,velocity_control)
+
             translation_toyota, orientation_toyota = time_tick_spline_asset(spline_assets['toyota'],'toyota',splines,controller,0)
+            translation_hamas, orientation_hamas = time_tick_spline_asset(spline_assets['hamas'],'hamas',splines,controller,0)
 
 
-            # translation_drone, orientation_drone = drone.get_position_and_orientation()
-            # current_heading_vector = drone.get_local_orientation(orientation_drone)
-            # angular_velocity_drone, linear_velocity_drone = controller.get_velocity_parameters_spline_path(translation_drone,current_heading_vector,splines['drone']['spline_points'],splines['drone']['spline_points_der'],'drone', kp = 200)
-
-            # # Set linear velocity to follow the tangent, and angular velocity to turn
-            # linear_velocity_drone = velocity_control if np.linalg.norm(velocity_control) > 0 else linear_velocity_drone
-            # drone.set_velocity(linear_velocity_drone, local = False)
-            drone_camera.transform_camera(camera_orientation,[0,0,0])
-
-
-            # translation_toyota, orientation_toyota = toyota.get_position_and_orientation()
-            # current_heading_vector = toyota.get_local_orientation(orientation_toyota)
-            # angular_velocity_toyota, linear_velocity_toyota = controller.get_velocity_parameters_spline_path(translation_toyota,current_heading_vector,splines['toyota']['spline_points'],splines['toyota']['spline_points_der'],'toyota', kp = 200)
-            # # Set linear velocity to follow the tangent, and angular velocity to turn
-            # toyota.set_velocity(linear_velocity_toyota, local = False)
-            # toyota.set_angular_velocity(np.array([0, 0, angular_velocity_toyota]), local = False) # Use world frame for simplicity
 
 
 
@@ -287,18 +365,11 @@ if __name__ == "__main__":
             velocity = toyota.get_linear_velocity(orientation_toyota)
             if controller.reset_asset(mapping, asset) :
                 restart_time = now
-                toyota.set_pose(translation=np.array(spline_points_toyota[0]), orientation = np.array([0,0,euler_initial_angles_toyota]),local = False)
+                toyota.set_pose(translation=np.array(splines['toyota']['spline_points'][0]), orientation = np.array([0,0,splines['toyota']['euler_initial_angles']]),local = False)
+                hamas.set_pose(translation=np.array(splines['hamas']['spline_points'][0]), orientation = np.array([0,0,splines['hamas']['euler_initial_angles']]),local = False)
 
 
             #___________________________________________________________________________________________________________
-
-            if asset in ptz_dict:
-                ptz_cams[asset][0].GetTargetPositionAttr().Set(0.0)   # ignore position
-                ptz_cams[asset][0].GetTargetVelocityAttr().Set(rot_flag[2] * 50.0)  # deg/s
-                ptz_cams[asset][1].GetTargetPositionAttr().Set(0.0)   # ignore position
-                ptz_cams[asset][1].GetTargetVelocityAttr().Set(rot_flag[1] * 50.0)  # deg/s
-                ptz_cams[asset][2].zoom_camera(zoom_factor)
-
 
 
             # check if its time to render / detect the next frame
@@ -309,12 +380,7 @@ if __name__ == "__main__":
 
             # ------------------ rendering update ------------------
             world.step(render=should_render) # update the world simulation, render the frame if should_render is True
-            
-            target, false_alarm = radar.get_detections(translation_toyota, orientation_toyota, velocity, target_id = "car1")
-            target = radar.check_if_targets_in_same_bin( [target], 'range')
-            target = {k: np.concatenate([np.atleast_1d(d.get(k, [])).tolist() for d in target]) for k in set().union(*target)}
-            detection = {"seq": frame_count, "time": round(time.time(),2)} | {key:np.hstack((target[key], false_alarm[key])).tolist() for key in target.keys()}
-            radar_rb.push(detection) # update the radar detection ring buffer 
+
 
             step_time = time.perf_counter()
 
@@ -326,9 +392,9 @@ if __name__ == "__main__":
                 last_time = now
 
                 if asset in ptz_dict:
-                    frame_rgb_bytes = ptz_cams[asset][2].frame_in_bytes(None, az_deg=detection.get('az_world', None), r_m=detection.get('range', None), polar_plot = polar_plot)
+                    frame_rgb_bytes = ptz_cams[asset][0].frame_in_bytes(None, az_deg=detection.get('az_world', None), r_m=detection.get('range', None), polar_plot = ptz_dict[asset]['radar_plot'])
                 else:
-                    frame_rgb_bytes = drone_camera.frame_in_bytes(None, az_deg=None, r_m=None, polar_plot = polar_plot)
+                    frame_rgb_bytes = drone_camera.frame_in_bytes(None, az_deg=None, r_m=None, polar_plot = None)
                     
                 if frame_rgb_bytes is not None:
                     video_rb.push({"bytes": frame_rgb_bytes, "seq": frame_count})  # Add the frame to the queue for processing

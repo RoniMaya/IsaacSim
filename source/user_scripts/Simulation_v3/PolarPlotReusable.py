@@ -3,7 +3,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import numpy as np
 
 class PolarPlotReusable:
-    def __init__(self, size=(220,220), r_max=200):
+    def __init__(self, size=(220,220), r_max=200, color ='r'):
         w, h = size
         dpi = 100
         self.fig = Figure(figsize=(w/dpi, h/dpi), dpi=dpi)
@@ -23,7 +23,7 @@ class PolarPlotReusable:
         self.ax.set_rlim(0, r_max)
 
         # Create an empty scatter, store reference
-        self.scat = self.ax.scatter([], [], s=12, c='r', alpha=0.95)
+        self.scat = self.ax.scatter([], [], s=12, c=color, alpha=0.95)
 
         # First draw: ensures grid is rasterized
         self.canvas.draw()

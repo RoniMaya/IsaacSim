@@ -131,8 +131,8 @@ class Asset():
         return current_heading_vector
 
 
-    def add_camera(self,width, height):
-        camera = CameraClass(prim_path = f"{self.prim_path}/sensors/camera",orientation = np.array([0, 90, 0]),translation = [0,0,-1],resolution = (width, height))
+    def add_camera(self,width, height,orientation= np.array([0, 90, 0])):
+        camera = CameraClass(prim_path = f"{self.prim_path}/sensors/camera",orientation = orientation,translation = [0,0,-1],resolution = (width, height))
         camera.camera.initialize()
         return camera
 

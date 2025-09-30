@@ -46,7 +46,7 @@ class GeoJSONLoader():
     def utm_to_enu(self, utm_lat, utm_lon):
         return np.column_stack([utm_lat - self.utm_data['lat'], utm_lon - self.utm_data['lon'], self.elevation, self.elevation*0 + 1])
 
-    def get_collision_point(self, world,sq, xyz, max_distance=10_000.0):
+    def get_collision_point(self,sq, xyz, max_distance=10_000.0):
             origin = Gf.Vec3f(xyz[0], xyz[1], xyz[2])
             direction = Gf.Vec3f(0.0, 0.0, -1.0) # Downward direction
             hit = sq.raycast_closest(origin, direction, max_distance)
@@ -55,9 +55,9 @@ class GeoJSONLoader():
             return xyz
 
 
-    def get_collisions(self, world, xyz):
+    def get_collisions(self, xyz):
         sq = physx.get_physx_scene_query_interface() # Get the PhysX scene query interface
-        return [self.get_collision_point(world,sq, xyz) for xyz in xyz]
+        return [self.get_collision_point(sq, xyz) for xyz in xyz]
     
     def lat_lon_to_enu(self):
         utm_coords = self.latlon_to_utm(self.lat, self.lon)

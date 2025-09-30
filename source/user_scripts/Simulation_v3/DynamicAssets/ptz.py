@@ -11,7 +11,7 @@ import numpy as np
 # Assuming you have your Asset and Joints classes defined elsewhere
 
 def create_ptz_camera(stage, prim_path, translation,
-    scale_base = [0.1, 0.1, 0.005], scale_middle = [0.1, 0.1, 0.2], scale_child = [0.2, 0.2, 0.1]):
+    scale_base = [0.1, 0.1, 0.005], scale_middle = [0.1, 0.1, 0.2], scale_child = [0.2, 0.2, 0.1], orientation_base = [0,0,0]):
 
     # --- CORRECTED: Use half-extents for all calculations ---
     hb = 1#scale_base[2] 

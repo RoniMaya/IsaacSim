@@ -8,6 +8,7 @@ from scipy.interpolate import splprep, splev
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from PIL import Image, ImageDraw, ImageFont
+import omni.physx as physx
 
 
 
@@ -263,7 +264,7 @@ def new_origin_of_part(origin_utm, origin_utm_piece2):
 
 
 
-def add_curve_to_stage(stage, spline_points_primiter,color,path="/World/BaseBorder", curve_type = "linear", closed_curve = "periodic"):
+def add_curve_to_stage(stage, spline_points_primiter,color,path="/World/BaseBorder", curve_type = "linear", closed_curve = "periodic",width=1.0):
     """Add a spline curve to the USD stage.
 
     Args:
@@ -275,6 +276,23 @@ def add_curve_to_stage(stage, spline_points_primiter,color,path="/World/BaseBord
     curve.CreatePointsAttr([Gf.Vec3f(*c) for c in spline_points_primiter])
     curve.CreateCurveVertexCountsAttr([len(spline_points_primiter)])
     curve.CreateTypeAttr(curve_type)  # straight segments
-    curve.CreateWidthsAttr([1.0])  # line thickness in viewport
+    curve.CreateWidthsAttr([width])  # line thickness in viewport
     curve.CreateWrapAttr().Set(closed_curve)
     UsdGeom.Gprim(curve.GetPrim()).CreateDisplayColorAttr(color)
+
+
+
+
+def get_collision_point(sq, xyz, max_distance=10_000.0,height= 0):
+        origin = Gf.Vec3f(xyz[0], xyz[1], xyz[2])
+        direction = Gf.Vec3f(0.0, 0.0, -1.0) # Downward direction
+        hit = sq.raycast_closest(origin, direction, max_distance)
+        if hit['hit']:
+            xyz[2] = hit['position'][2] + height
+        return xyz
+
+
+def get_collisions(xyz,height= 0):
+    sq = physx.get_physx_scene_query_interface() # Get the PhysX scene query interface
+    return [get_collision_point(sq, xyz,height=height) for xyz in xyz]
+

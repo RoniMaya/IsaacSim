@@ -9,7 +9,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from PIL import Image, ImageDraw, ImageFont
 import omni.physx as physx
-
+from pxr import UsdShade, Sdf,UsdPhysics
 
 
 def euler_to_quaternion(orientation):
@@ -295,4 +295,33 @@ def get_collision_point(sq, xyz, max_distance=10_000.0,height= 0):
 def get_collisions(xyz,height= 0):
     sq = physx.get_physx_scene_query_interface() # Get the PhysX scene query interface
     return [get_collision_point(sq, xyz,height=height) for xyz in xyz]
+
+
+
+def generate_transperant_cube(stage, asset_path,opacity = 0.1, scale = 0.5, scale_box = (1,1,1)):
+        cube = stage.DefinePrim(f"{asset_path}", "Cube")
+        UsdPhysics.RigidBodyAPI.Apply(cube)
+        cube_geom = UsdGeom.Cube(cube)
+        cube_geom.CreateSizeAttr(scale)   # makes it 5m wide instead of 2m
+        UsdGeom.XformCommonAPI(cube).SetScale(Gf.Vec3f(*scale_box))
+
+        # Create a material
+        material_path = f"{asset_path}/Looks/TransparentMaterial"
+        material = UsdShade.Material.Define(stage, material_path)
+
+        # Create a preview surface shader
+        shader_path = f"{material_path}/Shader"
+        shader = UsdShade.Shader.Define(stage, shader_path)
+        shader.CreateIdAttr("UsdPreviewSurface")
+
+        # Set shader parameters (baseColor white, opacity < 1.0)
+        shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(1.0, 1.0, 1.0))
+        shader.CreateInput("opacity", Sdf.ValueTypeNames.Float).Set(opacity)  # 0.0 = fully transparent, 1.0 = opaque
+
+        # Connect shader to material
+        material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
+
+        # Bind material to cube
+        UsdShade.MaterialBindingAPI(cube).Bind(material)
+
 

@@ -43,7 +43,7 @@ from isaacsim.core.utils import rotations
 import Joints
 from DynamicAssets import ptz
 from PolarPlotReusable import PolarPlotReusable
-
+from pxr import UsdShade, Sdf
 from path_define import (
     CFG_FILE, STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON,STAGE_PATH_TEL_KUDNA,STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2, STAGE_PATH_LATRUN_3, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH,
     TEXTURE_SKY, CESIUM_TRANSFORM,WHITE_TOYOTA,TANK,MEHOLA,STAGE_PATH_LATRUN_4,STAGE_PATH_LATRUN_4,COORDINATES_LATRUN_4,HAMAS,RADAR,
@@ -64,8 +64,12 @@ print("Paths:", STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON, STAGE_PATH_TEL_KUDNA, 
 #     return drive_base_cam, drive_middle_cam, camera
 
 
-def spawn_spline_asset(asset_path,usd_load_path, splines,scale = 2, height=0):
-    asset = Asset(asset_path, usd_load_path=usd_load_path, rigid_prim=True, scale=[scale]*3)
+def spawn_spline_asset(asset_path,usd_load_path, splines,scale = [1,1,1], height=0,cube_scale = [1,1,1], opacity = 0.1):
+    if usd_load_path is None:
+        stage = omni.usd.get_context().get_stage()
+        Utils.generate_transperant_cube(stage,asset_path, scale_box=cube_scale,opacity= opacity)
+
+    asset = Asset(asset_path, usd_load_path=usd_load_path, rigid_prim=True, scale=scale)
     spline_points_toyota = np.vstack(Utils.get_collisions(  splines['spline_points'],height= height))
     asset.set_pose(translation=np.array(spline_points_toyota[0]), orientation = np.array([0,0,splines['euler_initial_angles']]),local = False)
     return asset
@@ -78,30 +82,23 @@ def spawn_asset_in_position(asset_path,usd_load_path, poi_points,asset_name,scal
     return asset
 
 
+
+
+
+
+
+
 def define_ptz_camera( asset_path, width, height, translation,orientation,usd_load_path = None, scale = 1,translation_camera = np.array([0,0,-3])):
 
     if usd_load_path is None:
         stage = omni.usd.get_context().get_stage()
-        cube = stage.DefinePrim(f"{asset_path}", "Cube")
-        UsdPhysics.RigidBodyAPI.Apply(cube)
-        cube_geom = UsdGeom.Cube(cube)
-        cube_geom.CreateSizeAttr(0.5)   # makes it 5m wide instead of 2m
-
+        Utils.generate_transperant_cube(stage,asset_path)
 
     drone = Asset(asset_path, rigid_prim=True, usd_load_path = usd_load_path, scale=[scale]*3)
     drone.set_pose(translation=translation, orientation=orientation, local=False)
     drone.disable_gravity()
     camera = drone.add_camera(width, height, translation = translation_camera)
     return camera, drone
-
-# def define_ptz_camera(cam_path, asset, height_poi,poi_points, orientation= np.array([0,0,0])):
-#     DynamicCuboid(prim_path=f"{cam_path}", color=np.array([0, 255, 0]))
-#     camera_cube = Asset(cam_path, rigid_prim=True)
-#     camera_cube.set_pose(translation=np.array([poi_points[asset][0][0],poi_points[asset][0][1],poi_points[asset][0][2] + height_poi[asset]]), orientation = np.array([0,0,180]),local = False)
-#     camera_cube.disable_gravity()
-#     camera = camera_cube.add_camera(width, height,orientation = orientation)
-#     return camera,camera_cube
-
 
 # need to add position in POI
 
@@ -173,7 +170,7 @@ if __name__ == "__main__":
     ptz_cams = list(ptz_dict.keys())
 
     poi_geofile = ptz_cams + ['perimeter_part','tank','tank2','mehola']
-    height_poi = {'CamEast': 2, 'CamWest': 2,'CamNorth': 2, 'perimeter_part': 1, 'tank': 2, 'drone': 350, 'toyota': 0,'tank2': 2,'mehola':2, 'hamas': 0}
+    height_poi = {'CamEast': 2, 'CamWest': 2,'CamNorth': 2, 'perimeter_part': 1, 'tank': 2, 'drone': 20, 'toyota': 0,'tank2': 2,'mehola':2, 'hamas': 0.2}
     geo_spline_names = ['logistics_part','drone_part','hamas']
     assets_names = ['toyota','drone','hamas','tank','tank2','mehola']
 
@@ -201,7 +198,9 @@ if __name__ == "__main__":
     
     asset_paths_objects = [GeoJSONLoader(utm_data[0], asset_path,GEOJSON_LATRUN) for asset_path in geo_spline_names] # load assets locations and paths
     splines = {asset_name:path_object.spline_dict() for path_object,asset_name in zip(asset_paths_objects,assets_names)} # create splines for each asset
-    splines['drone']['spline_points'][:,2] = splines['drone']['spline_points'][:,2]*0 + height_poi['drone'] # set the drone height
+
+
+
 
     poi_objects = [GeoJSONLoader(utm_data[0], poi_name,GEOJSON_LATRUN) for poi_name in poi_geofile] # define the points of interest objects
     poi_points = {poi_name:poi_object.lat_lon_to_enu() for poi_object,poi_name in zip(poi_objects,poi_geofile)} # convert the points of interest to ENU coordinates per asset (not spline)
@@ -245,15 +244,20 @@ if __name__ == "__main__":
 
 
 
-    toyota = spawn_spline_asset(toyota_path,WHITE_TOYOTA, splines['toyota'],scale = 2, height=height_poi['toyota'])
+    toyota = spawn_spline_asset(toyota_path,WHITE_TOYOTA, splines['toyota'],scale = [2,2,2], height=height_poi['toyota'])
 
 
-    DynamicCuboid(prim_path=f"{hamas_path}", color=np.array([0, 255, 0]))
-    hamas = spawn_spline_asset(hamas_path,None, splines['hamas'],scale = 1, height=height_poi['hamas'])
-    splines['hamas']['spline_points'][:,2] = splines['hamas']['spline_points'][:,2] + 2 # set the hamas height
+    # DynamicCuboid(prim_path=f"{hamas_path}", color=np.array([0, 255, 0]))
+    hamas = spawn_spline_asset(hamas_path,HAMAS, splines['hamas'], height=height_poi['hamas'], scale = [0.5,0.5,0.5], opacity = 0)
+    splines['hamas']['spline_points'][:,2] = splines['hamas']['spline_points'][:,2] + height_poi['hamas'] # set the hamas height
+    splines['hamas']['spline_points'],splines['hamas']['spline_points_der'], _ = Utils.generate_spline_path_from_enu(splines['hamas']['spline_points'], spline_param = 3, num_samples = 500, add_z = 0)
 
-    # hamas.disable_gravity()
 
+    hamas.disable_gravity()
+
+
+    splines['drone']['spline_points'] = np.vstack(Utils.get_collisions(  splines['drone']['spline_points'],height= height_poi['drone']))
+    splines['drone']['spline_points'],splines['drone']['spline_points_der'], _ = Utils.generate_spline_path_from_enu(splines['drone']['spline_points'], spline_param = 3, num_samples = 500, add_z = 0)
     drone_camera, drone = define_ptz_camera( drone_path, width, height,np.array(splines['drone']['spline_points'][0]),
                                              np.array([0,0,splines['drone']['euler_initial_angles']],),usd_load_path=None)
 
@@ -266,6 +270,15 @@ if __name__ == "__main__":
 
 
 
+    # Asset(f'{hamas_path}/look', usd_load_path=HAMAS, rigid_prim=False, scale=[0.05]*3) 
+
+    # Asset("/World/Looks/MyMaterial_hamas", usd_load_path=HAMAS, rigid_prim=False, scale=[0.05]*3)
+    # stage = omni.usd.get_context().get_stage()
+    # mesh_prim = stage.GetPrimAtPath(f'{hamas_path}/look')
+    # material_prim = stage.GetPrimAtPath("/World/Looks/MyMaterial_hamas")
+    # material_binding_api = UsdShade.MaterialBindingAPI.Apply(mesh_prim)
+    # material_binding_api.Bind(UsdShade.Material(material_prim))
+
 
 
     Utils.add_curve_to_stage(enviorment.stage, np.vstack(poi_points['perimeter_part'])[:,0:3],
@@ -273,23 +286,19 @@ if __name__ == "__main__":
 
 
 
-    Utils.add_curve_to_stage(enviorment.stage, np.vstack(splines['hamas']['spline_points'])[:,0:3],
-                             path='/World/hamas_spline',color=[Gf.Vec3f(0.1, 0.2, 0.5)],width = 0.5)
+    # Utils.add_curve_to_stage(enviorment.stage, np.vstack(splines['hamas']['spline_points'])[:,0:3],
+    #                          path='/World/hamas_spline',color=[Gf.Vec3f(0.1, 0.2, 0.5)],width = 0.5)
 
 
 
     ptz_cams = {cam_name:  define_ptz_camera(cam_path, width, height,translation = np.array([poi_points[cam_name][0][0],poi_points[cam_name][0][1],
-                                                                                             poi_points[cam_name][0][2]]), 
+                                                                                             poi_points[cam_name][0][2] - 1]), 
                                                                                              orientation= np.array([0,0,ptz_dict[cam_name]['rotation'][2]]),
                                                                                              usd_load_path = None, scale=1,translation_camera= np.array([0,0,height_poi[cam_name]])) for cam_name,cam_path  in zip(ptz_cams, cameras_path)}
     [Asset(f'{cam_path}/look', usd_load_path=RADAR, rigid_prim=False, scale=[1.5]*3) for cam_path in cameras_path]
 
 
     Asset("/World/Looks/MyMaterial", usd_load_path=RADAR, rigid_prim=False, scale=[2]*3)
-
-
-    from pxr import UsdShade, Sdf
-
     stage = omni.usd.get_context().get_stage()
     mesh_prim = stage.GetPrimAtPath(f'{cameras_path[0]}/look')
     material_prim = stage.GetPrimAtPath("/World/Looks/MyMaterial")
@@ -318,21 +327,6 @@ if __name__ == "__main__":
                 bindingStrength=UsdShade.Tokens.weakerThanDescendants
             )
             print(f"Set binding strength on parent '{parent_prim.GetPath()}' to 'weakerThanDescendants'.")
-
-
-
-
-
-    # stage.DefinePrim("/World/Looks", "Scope")  # make sure Looks scope exists
-    # material_path = "/World/Looks/MyMaterial"
-    # material_prim = stage.OverridePrim("/World/Looks/MyMaterial")
-    # material_prim.GetReferences().AddReference(RADAR)
-
-    # child_prim = stage.GetPrimAtPath(f'{cameras_path[0]}/look')
-    # child_prim.RemoveProperty("rel:material:binding")
-    # UsdShade.MaterialBindingAPI(child_prim).Bind(UsdShade.Material(stage.GetPrimAtPath(material_path)))
-
-
 
 
     [ptz_cams[asset][0].transform_camera([0,0,0],[0,0,0]) for asset in ptz_cams.keys()]

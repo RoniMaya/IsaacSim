@@ -8,7 +8,7 @@ import carb
 import subprocess
 import threading
 import queue  # IMPORTANT: For thread-safe communication
-from PIL import Image,ImageDraw,ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 
 # --- Isaac Sim Core Imports ---
@@ -21,6 +21,9 @@ from omni.isaac.sensor import Camera
 import omni.kit.commands
 import Utils
 from isaacsim.core.api.objects import DynamicCuboid, VisualCuboid, DynamicCylinder
+
+import matplotlib.cm as cm
+_THERMAL_LUT = (cm.get_cmap("inferno")(np.linspace(0, 1, 256))[:, :3] * 255).astype(np.uint8)
 
 
 
@@ -131,9 +134,65 @@ class CameraClass():
         return self.camera.get_rgba()
 
 
-    def frame_in_bytes(self,text_to_add = None,az_deg=None, r_m=None,polar_plot = None):
+
+    def rgb_to_fake_thermal(self,
+        rgb: np.ndarray,
+        gamma: float = 0.75,       # <1 boosts highlights (hotter feel)
+        gain: float = 1.25,        # stretch “dynamic range”
+        blur_px: float = 1.2,      # light optical blur
+        noise_std: float = 0.015,  # sensor noise (0..1 scale)
+        vignette_strength: float = 0.25  # darken edges
+    ) -> np.ndarray:
+        """
+        rgb: HxWx3 uint8
+        returns: HxWx3 uint8 thermal-mapped image
+        """
+        assert rgb.ndim == 3 and rgb.shape[2] >= 3, "Expected HxWx3"
+        h, w = rgb.shape[:2]
+
+        # 1) luminance → grayscale [0..1]
+        y = (0.7126 * rgb[..., 0] + 0.2152 * rgb[..., 1] + 0.0722 * rgb[..., 2]) / 255.0
+
+        # 2) subtle blur to mimic thermal PSF (via PIL for minimal deps)
+        if blur_px > 0:
+            y_img = Image.fromarray((y * 255).astype(np.uint8))
+            y_img = y_img.filter(ImageFilter.GaussianBlur(radius=blur_px))
+            y = np.asarray(y_img, dtype=np.float32) / 255.0
+
+        # 3) non-linear tone curve + gain
+        y = np.clip((y ** gamma) * gain, 0.0, 1.0)
+
+        # 4) add small Gaussian noise
+        if noise_std > 0:
+            y = np.clip(y + np.random.normal(0.0, noise_std, y.shape).astype(np.float32), 0.0, 1.0)
+
+        # # 5) simple circular vignette (hotter center)
+        # if vignette_strength > 0:
+        #     yy, xx = np.mgrid[0:h, 0:w]
+        #     cx, cy = (w - 1) * 0.5, (h - 1) * 0.5
+        #     r = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+        #     r /= r.max() + 1e-6
+        #     vign = 1.0 - vignette_strength * (r ** 1.5)
+        #     y = np.clip(y * vign.astype(np.float32), 0.0, 1.0)
+        gray = 255-np.clip(y * 255.0, 0, 255).astype(np.uint8)
+        return np.stack([gray, gray, gray], axis=-1)
+
+
+    def frame_in_bytes(self,text_to_add = None,az_deg=None, r_m=None,polar_plot = None, thermal = False):
         frame_rgba = self.get_frame()
+        rgb = np.asarray(frame_rgba, dtype=np.uint8)[..., :3]
+
         if frame_rgba is not None and frame_rgba.size > 0:
+                    # --- Thermal pass ---
+            if thermal:
+                frame_rgba = self.rgb_to_fake_thermal(
+                    rgb,
+                    gamma=0.75,
+                    gain=1.25,
+                    blur_px=1.2,
+                    noise_std=0.015,
+                    vignette_strength=0.25,
+                )
 
             if text_to_add is not None:
                 frame_rgba = Image.fromarray(frame_rgba)

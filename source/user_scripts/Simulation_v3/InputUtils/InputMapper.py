@@ -49,6 +49,16 @@ class InputMapper():
     def reset_value(self, reset_cmd: str) -> int:
         """Returns 1 if the command is RESET."""
         return 1 if reset_cmd.upper() == "RESET" else 0
+    
+
+    def thermal_value(self, thermal_cmd: str) -> int:
+        """Returns 1 if the command is THERMAL."""
+        return True if thermal_cmd.upper() == "THERMAL" else False
+
+    def slave_value(self, slave_cmd: str) -> int:
+        """Returns 1 if the command is SLAVE."""
+        return True if slave_cmd.upper() == "SLAVE" else False
+
 
     def initialize_mapping(self, speed: float, deg_s: float) -> dict:
         """
@@ -137,5 +147,9 @@ class InputMapper():
                     self.apply_zoom_updates(current_mapping, key_action['zoom'], profile.get('zoom_factor', 0.1))
                 if 'reset' in key_action:
                     current_mapping['reset'] = self.reset_value(key_action['reset'])
-        
+                if 'thermal' in key_action:
+                    current_mapping['thermal'] = self.thermal_value(key_action['thermal'])
+                if 'slave' in key_action:
+                    current_mapping['slave'] = self.slave_value(key_action['slave'])
+
         return self.mapping

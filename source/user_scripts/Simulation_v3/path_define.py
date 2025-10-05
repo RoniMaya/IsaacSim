@@ -40,6 +40,7 @@ TANK     = apath("assets","tank", "tank.usd")
 MEHOLA     = apath("assets","mehola","clean_cargo","mehola2.usd")
 HAMAS = apath("assets","soldiers","hamas.usd")
 RADAR = apath("assets","radar","radar_cam.usd")
+KELA = apath("assets","kelian","kelian.usd")
 
 TEXTURE_SKY        = apath("assets","sky","sky_4.png")
 CESIUM_TRANSFORM   = apath("ogmar", "conf.JSON")

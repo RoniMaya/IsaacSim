@@ -56,6 +56,7 @@ class Radar:
         self.radar_properties['range_vector'] = np.arange(0, self.radar_properties['r_max'], self.radar_properties['r_resolution'])
         self.radar_properties['azimuth_vector'] = np.arange(- self.radar_properties['az_max']//2, self.radar_properties['az_max']//2, self.radar_properties['az_resolution'])
         self.radar_properties['velocity_vector'] = np.arange(0.3, self.radar_properties['vel_max'], self.radar_properties['vel_resolution'])
+        self.radar_properties['el_vector'] = np.arange(- self.radar_properties['el_max']//2, self.radar_properties['el_max']//2, self.radar_properties['el_resolution'])
         self.num_of_cells = len(self.radar_properties['range_vector']) * len(self.radar_properties['azimuth_vector']) * len(self.radar_properties['velocity_vector'])
         self.radar_rotation = self.define_rotation(self.radar_properties['rotation']) # rotate radar to world FoR
         self.radar_angle = self.radar_properties['rotation']
@@ -225,16 +226,18 @@ class Radar:
         # so we will generate random indices for the false alarms range, azimuth and velocity cells
         num_of_expected_false_alarms = self.num_of_cells * self.radar_properties['pfa']  # Expected number of false alarms
         num_false_alarms = np.random.poisson(num_of_expected_false_alarms) # Given an average rate of occurrence, how many events are likely to happen in this interval
-        velocity,range_detection,azimuth = self.radar_properties['velocity_vector'], self.radar_properties['range_vector'], self.radar_properties['azimuth_vector']
+        velocity,range_detection,azimuth,elevation = self.radar_properties['velocity_vector'], self.radar_properties['range_vector'], self.radar_properties['azimuth_vector'], self.radar_properties['el_vector']
         # get random indices for the false alarms range, azimuth and velocity cells
         false_alarm['velocity'] = (np.random.uniform(velocity[0], velocity[-1], size=num_false_alarms)).tolist()
         false_alarm['range'] = (np.random.uniform(range_detection[0], range_detection[-1], size=num_false_alarms)).tolist()
         false_alarm['azimuth'] = (np.random.uniform(azimuth[0], azimuth[-1], size=num_false_alarms)).tolist()
+        false_alarm['elevation'] = (np.random.uniform(elevation[0], elevation[-1], size=num_false_alarms)).tolist()
         false_alarm['snr'] = (np.random.uniform(0, self.radar_properties['snr'], size=num_false_alarms)).tolist()
         false_alarm['id'] = [f'false_alarm_{idx}_{target_id}' for idx in range(num_false_alarms)]
         false_alarm['lon'] = []
         false_alarm['lat'] = []
         false_alarm['az_world'] = []
+        false_alarm['el_world'] = []
         return false_alarm
 
 
@@ -242,12 +245,13 @@ class Radar:
 
 
     def generate_targets(self,target_id):
-        target_detection = {'range': [], 'azimuth': [], 'velocity': [],'lon':[],'lat':[],'id':[],'az_world':[]}
+        target_detection = {'range': [], 'azimuth': [], 'velocity': [],'lon':[],'lat':[],'id':[],'az_world':[],'elevation':[]}
          # decide if the target is detected based on the Pd
-        snr,r_resolution, az_resolution, vel_resolution = self.radar_properties['snr'], self.radar_properties['r_resolution'], self.radar_properties['az_resolution'], self.radar_properties['vel_resolution']
+        snr,r_resolution, az_resolution, vel_resolution,el_resolution = self.radar_properties['snr'], self.radar_properties['r_resolution'], self.radar_properties['az_resolution'], self.radar_properties['vel_resolution'], self.radar_properties['el_resolution']
         if np.random.binomial(n=1, p=self.radar_properties['pd'], size=1) == 1:
             target_detection['range'] = [self.target_range + self.generate_noise(snr, r_resolution)]  # Add noise to the target range
             target_detection['azimuth'] = [self.az_los + self.generate_noise(snr, az_resolution)]  # Add noise to the target angle
+            target_detection['elevation'] = [self.el_los + self.generate_noise(snr, el_resolution)]  # Add noise to the target angle
             target_detection['velocity'] = [self.radial_velocity + self.generate_noise(snr, vel_resolution)]  # Add noise to the target velocity
             target_detection['snr'] = [snr]
             target_detection['id'] = [target_id]

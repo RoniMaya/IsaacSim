@@ -35,6 +35,7 @@ from scipy.interpolate import splprep, splev
 from Publishers.DetectionPublisherMQTT import DetectionPublisherMQTT
 import utm
 # from Publishers.DetectionPublisher import DetectionPublisher
+import omni.isaac.core.utils.numpy.rotations as rot_utils
 
 import paho.mqtt.client as mqtt
 import cv2
@@ -46,7 +47,7 @@ from PolarPlotReusable import PolarPlotReusable
 from pxr import UsdShade, Sdf
 from path_define import (
     CFG_FILE, STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON,STAGE_PATH_TEL_KUDNA,STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2, STAGE_PATH_LATRUN_3, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH,
-    TEXTURE_SKY, CESIUM_TRANSFORM,WHITE_TOYOTA,TANK,MEHOLA,STAGE_PATH_LATRUN_4,STAGE_PATH_LATRUN_4,COORDINATES_LATRUN_4,HAMAS,RADAR,
+    TEXTURE_SKY, CESIUM_TRANSFORM,WHITE_TOYOTA,TANK,MEHOLA,STAGE_PATH_LATRUN_4,STAGE_PATH_LATRUN_4,COORDINATES_LATRUN_4,HAMAS,RADAR,KELA,
     RCS_FILE_PATH, RADAR_PROP_PATH, COORDINATES_GS,COORDINATES_TK,COORDINATES_LATRUN_1,COORDINATES_LATRUN_2,COORDINATES_LATRUN_3, GEOJSON_GS, GEOJSON_TK, GEOJSON_LATRUN
 )
 
@@ -64,7 +65,7 @@ print("Paths:", STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON, STAGE_PATH_TEL_KUDNA, 
 #     return drive_base_cam, drive_middle_cam, camera
 
 
-def spawn_spline_asset(asset_path,usd_load_path, splines,scale = [1,1,1], height=0,cube_scale = [1,1,1], opacity = 0.1):
+def spawn_spline_asset(asset_path,usd_load_path, splines,scale = [1,1,1], height=0,cube_scale = [1,1,1], opacity = 0):
     if usd_load_path is None:
         stage = omni.usd.get_context().get_stage()
         Utils.generate_transperant_cube(stage,asset_path, scale_box=cube_scale,opacity= opacity)
@@ -158,21 +159,21 @@ if __name__ == "__main__":
 
 
 
-    ptz_dict = {f'CamEast' : {'path':f"/World/CamEast_prim", 'rotation': [0,0,0], 'radar_angle':[0,90,0],
+    ptz_dict = {f'CamEast' : {'path':f"/World/CamEast_prim", 'rotation': [0,0,0], 'rotation_ini': [0,0,0],'radar_angle':[0,90,0],
                                'radar_path':f"/World/radar0",'color':(0.0,1.0,0.0),'radar_plot': PolarPlotReusable(size=(220,220), r_max=400,color = 'g')}}  # define the ptz cameras dictionary
-    ptz_dict.update({f'CamWest' : {'path':f"/World/CamWest_prim", 'rotation': [0,0,180],
+    ptz_dict.update({f'CamWest' : {'path':f"/World/CamWest_prim", 'rotation': [0,0,180],'rotation_ini': [0,0,180],
                                     'radar_angle':[0,90,180], 'radar_path':f"/World/radar1",'color':(1.0,0.0,0.0), 'radar_plot':PolarPlotReusable(size=(220,220), r_max=400)}})  # define the ptz cameras dictionary
-    ptz_dict.update({f'CamNorth' : {'path':f"/World/CamNorth_prim", 'rotation': [0,0,90],
+    ptz_dict.update({f'CamNorth' : {'path':f"/World/CamNorth_prim", 'rotation': [0,0,90],'rotation_ini': [0,0,90],
                                     'radar_angle':[0,90,-90], 'radar_path':f"/World/radar2",'color':(0.0,0.0,1.0), 'radar_plot':PolarPlotReusable(size=(220,220), r_max=400,color = 'b')}})  # define the ptz cameras dictionary
 
 
 
     ptz_cams = list(ptz_dict.keys())
 
-    poi_geofile = ptz_cams + ['perimeter_part','tank','tank2','mehola']
-    height_poi = {'CamEast': 2, 'CamWest': 2,'CamNorth': 2, 'perimeter_part': 1, 'tank': 2, 'drone': 20, 'toyota': 0,'tank2': 2,'mehola':2, 'hamas': 0.2}
-    geo_spline_names = ['logistics_part','drone_part','hamas']
-    assets_names = ['toyota','drone','hamas','tank','tank2','mehola']
+    poi_geofile = ptz_cams + ['tank','tank2','mehola','mehola2']
+    height_poi = {'CamEast': 2, 'CamWest': 2,'CamNorth': 2, 'perimeter_circle': 15, 'tank': 2, 'drone': 20, 'toyota': 0,'tank2': 2,'mehola':1, 'hamas': 0.5,'mehola2':1,'kela':0.5}
+    geo_spline_names = ['toyota','drone_part','hamas','perimeter_circle','kela']
+    assets_names = ['toyota','drone','hamas','perimeter_circle','kela','tank','tank2','mehola','mehola2']
 
     drone_path = "/World/drone"
     camera_path = "/World/camera_prim"
@@ -181,7 +182,10 @@ if __name__ == "__main__":
     tank_path = "/World/vehicles/tank"
     tank2_path = "/World/vehicles/tank2"
     mehola_path = "/World/mehola"
+    mehola2_path = "/World/mehola2"
     hamas_path = "/World/soldiers/hamas"
+    perimeter_circle_path = "/World/perimeter_circle"
+    kela_path = "/World/soldiers/kela"
 
     terrain_list = [f"/World/Terrain/Terrain_{i}" for i in range(len(stage_file_path))] # define the terrain paths
     utm_data = [Utils.open_coords_file(utm_data_piece) for utm_data_piece in geo_coordinates_stage] # load the UTM data for each stage
@@ -224,12 +228,12 @@ if __name__ == "__main__":
     new_origins = [Utils.new_origin_of_part(utm_data[0], utm_data_piece) for utm_data_piece in utm_data[1:]]
     [enviorment.load_prim_with_collision(f'{file_path}', stage_path) for file_path,stage_path in zip(stage_file_path, terrain_list)]
     [enviorment.translate_terrain(terrain, origin) for terrain,origin in zip(terrain_list[1:],new_origins)]
-    enviorment.set_gravity(physics_path = "/World/Physics")
     
 
     world = World()
     world.reset()
 
+    enviorment.set_gravity(physics_path = "/World/Physics",gravity_magnitude = 980)
 
 
     poi_points = {point_name:Utils.get_collisions(point_value,height = height_poi[point_name]) for point_name,point_value in poi_points.items()}
@@ -251,9 +255,9 @@ if __name__ == "__main__":
     hamas = spawn_spline_asset(hamas_path,HAMAS, splines['hamas'], height=height_poi['hamas'], scale = [0.5,0.5,0.5], opacity = 0)
     splines['hamas']['spline_points'][:,2] = splines['hamas']['spline_points'][:,2] + height_poi['hamas'] # set the hamas height
     splines['hamas']['spline_points'],splines['hamas']['spline_points_der'], _ = Utils.generate_spline_path_from_enu(splines['hamas']['spline_points'], spline_param = 3, num_samples = 500, add_z = 0)
-
-
     hamas.disable_gravity()
+
+
 
 
     splines['drone']['spline_points'] = np.vstack(Utils.get_collisions(  splines['drone']['spline_points'],height= height_poi['drone']))
@@ -265,30 +269,25 @@ if __name__ == "__main__":
     spawn_asset_in_position( tank_path, TANK, poi_points, 'tank', scale=4, height=height_poi['tank'])
     spawn_asset_in_position( tank2_path, TANK, poi_points, 'tank2', scale=4, height=height_poi['tank2'])
     spawn_asset_in_position( mehola_path, MEHOLA, poi_points, 'mehola', scale=5, height=height_poi['mehola'],rigid_prim = False)
-
-    spline_assets = { 'toyota': toyota, 'drone': drone , 'hamas': hamas }
-
+    spawn_asset_in_position( mehola2_path, MEHOLA, poi_points, 'mehola2', scale=5, height=height_poi['mehola'],rigid_prim = False, orientation = 80)
 
 
-    # Asset(f'{hamas_path}/look', usd_load_path=HAMAS, rigid_prim=False, scale=[0.05]*3) 
-
-    # Asset("/World/Looks/MyMaterial_hamas", usd_load_path=HAMAS, rigid_prim=False, scale=[0.05]*3)
-    # stage = omni.usd.get_context().get_stage()
-    # mesh_prim = stage.GetPrimAtPath(f'{hamas_path}/look')
-    # material_prim = stage.GetPrimAtPath("/World/Looks/MyMaterial_hamas")
-    # material_binding_api = UsdShade.MaterialBindingAPI.Apply(mesh_prim)
-    # material_binding_api.Bind(UsdShade.Material(material_prim))
+    # DynamicCuboid(prim_path=f"{hamas_path}", color=np.array([0, 255, 0]))
+    kela = spawn_spline_asset(kela_path,KELA, splines['kela'], height=height_poi['kela'], scale = [0.5,0.5,0.5], opacity = 0)
+    splines['kela']['spline_points'][:,2] = splines['kela']['spline_points'][:,2] + height_poi['kela'] # set the kela height
+    splines['kela']['spline_points'],splines['kela']['spline_points_der'], _ = Utils.generate_spline_path_from_enu(splines['kela']['spline_points'], spline_param = 3, num_samples = 500, add_z = 0)
+    kela.disable_gravity()
 
 
 
-    Utils.add_curve_to_stage(enviorment.stage, np.vstack(poi_points['perimeter_part'])[:,0:3],
-                             path='/World/BaseBorder_down',color=[Gf.Vec3f(0.1, 0.2, 0.5)],width = 0.5)
+    spline_assets = { 'toyota': toyota, 'drone': drone , 'hamas': hamas, 'kela': kela }
 
 
 
-    # Utils.add_curve_to_stage(enviorment.stage, np.vstack(splines['hamas']['spline_points'])[:,0:3],
-    #                          path='/World/hamas_spline',color=[Gf.Vec3f(0.1, 0.2, 0.5)],width = 0.5)
 
+    spline_points_perimeter = np.vstack(Utils.get_collisions(  splines['perimeter_circle']['spline_points'],height= height_poi['perimeter_circle']))
+    Utils.add_curve_to_stage(enviorment.stage, np.vstack(splines['perimeter_circle']['spline_points'])[:,0:3],
+                             path='/World/perimeter_circle',color=[Gf.Vec3f(0.1, 0.2, 0.5)],width = 0.5)
 
 
     ptz_cams = {cam_name:  define_ptz_camera(cam_path, width, height,translation = np.array([poi_points[cam_name][0][0],poi_points[cam_name][0][1],
@@ -306,40 +305,35 @@ if __name__ == "__main__":
     material_binding_api.Bind(UsdShade.Material(material_prim))
 
 
-
-
-    # --- THE FIX: Modify the parent prim's binding ---
-    # 1. Get the parent prim
-    parent_prim = mesh_prim.GetParent()
-
-    if parent_prim:
-        # 2. Get the Material Binding API for the parent
-        parent_binding_api = UsdShade.MaterialBindingAPI(parent_prim)
-        
-        # 3. Re-bind its material, but this time specifying the binding strength
-        # Note: You need to know the path to the parent's material
-        # Replace "/Path/To/Parent/Material" with the actual material path
-        parent_material = UsdShade.Material(stage.GetPrimAtPath("/World/Looks/MyMaterial"))
-        
-        if parent_material:
-            parent_binding_api.Bind(
-                parent_material, 
-                bindingStrength=UsdShade.Tokens.weakerThanDescendants
-            )
-            print(f"Set binding strength on parent '{parent_prim.GetPath()}' to 'weakerThanDescendants'.")
-
-
     [ptz_cams[asset][0].transform_camera([0,0,0],[0,0,0]) for asset in ptz_cams.keys()]
 
 
-
+    target_angle = 0
+    target_elevation = 0
 
 
     asset = 'cam1'
     dt = 1.0 / physics_frequency
     old_orientation = np.array([0,90,0])
     world.step(render=False)
+    thermal_flag = False
+    slave = False
 
+    import math
+    def yaw_from_quat_Zup(qwxyz):
+        # qwxyz = [w, x, y, z] (Isaac/pxr usually WXYZ; adapt if yours is XYZW)
+        w, x, y, z = qwxyz
+        # Rotation matrix (Z-up)
+        # R = [[1-2(y^2+z^2),   2(xy - wz),     2(xz + wy)],
+        #      [  2(xy + wz), 1-2(x^2+z^2),    2(yz - wx)],
+        #      [  2(xz - wy),   2(yz + wx),  1-2(x^2+y^2)]]
+        R00 = 1 - 2*(y*y + z*z)
+        R10 = 2*(x*y + w*z)
+        yaw = math.atan2(R10, R00)  # shortest-path yaw in [-pi, pi]
+        return yaw
+
+    def wrap_to_pi(a):
+        return (a + math.pi) % (2*math.pi) - math.pi
 
 
     while simulation_app.is_running():
@@ -357,12 +351,6 @@ if __name__ == "__main__":
             asset = imapper.active_camera_target
 
             if asset not in ptz_dict:
-                camera_orientation,old_orientation = update_camera_orientation(mapping, asset,dt,old_orientation)
-                zoom_factor = controller.zoom_factor(mapping, asset)
-                drone_camera.zoom_camera(zoom_factor)
-                drone_camera.transform_camera(camera_orientation,[0,0,0])
-
-                    
 
                 camera_orientation = controller.update_orientation(mapping, asset)
                 camera_orientation = old_orientation+camera_orientation*dt
@@ -372,34 +360,57 @@ if __name__ == "__main__":
                 drone_camera.transform_camera(camera_orientation,[0,0,0])
 
             if asset in ptz_dict:
-                camera_orientation,old_orientation_ptz = update_camera_orientation(mapping, asset,dt,ptz_dict[asset]['rotation'])
-                ptz_dict[asset]['rotation'] = old_orientation_ptz
+
                 zoom_factor = controller.zoom_factor(mapping, asset)
                 ptz_cams[asset][0].zoom_camera(zoom_factor)
-                ptz_cams[asset][0].transform_camera([0,camera_orientation[1],0],[0,0,0])
-
-                # camera_orientation = controller.update_orientation(mapping, asset)
-                # camera_orientation = old_orientation_ptz+camera_orientation*dt
-                # old_orientation_ptz = camera_orientation.copy()
-
-                #----------------------------------------------------------------------------
-                # set the velocity, orientation and zoom of the "camera" cube
-                translation, orientation = ptz_cams[asset][1].get_position_and_orientation()
-                camera_orientation_kb = controller.update_orientation(mapping, asset)
-                ptz_cams[asset][1].set_angular_velocity([np.array([0,0,camera_orientation_kb[2]/15])], orientation)
-                # camera_test.transform_camera([0,camera_orientation[1]*10,0],[0,0,0])
 
 
+                slave = controller.enslave_camera(slave, mapping, asset)
+                if slave == False:
+                    ptz_cams[asset][0].transform_camera([0,camera_orientation[1],0],[0,0,0])
 
-                # rot_flag = controller.rot_flag(mapping, asset)
+                    #----------------------------------------------------------------------------
+                    # set the velocity, orientation and zoom of the "camera" cube
+                    translation, orientation = ptz_cams[asset][1].get_position_and_orientation()
+                    camera_orientation_kb = controller.update_orientation(mapping, asset)
+                    ptz_cams[asset][1].set_angular_velocity([np.array([0,0,camera_orientation_kb[2]/15])], orientation)
+                    camera_orientation,old_orientation_ptz = update_camera_orientation(mapping, asset,dt,ptz_dict[asset]['rotation'])
+                    ptz_dict[asset]['rotation'] = old_orientation_ptz
 
-                # # ptz_cams[asset][0].GetTargetPositionAttr().Set(ptz_dict[asset]['rotation'][2])   # ignore position
-                # ptz_cams[asset][0].GetTargetVelocityAttr().Set(rot_flag[2] * 50.0)  # deg/s
-                # # ptz_cams[asset][1].GetTargetPositionAttr().Set(ptz_dict[asset]['rotation'][2])   # ignore position
-                # ptz_cams[asset][1].GetTargetVelocityAttr().Set(rot_flag[1] * 50.0)  # deg/s
-                # ptz_cams[asset][2].zoom_camera(zoom_factor)
-                target, false_alarm = radars[asset].get_detections(translation_toyota, orientation_toyota, velocity, target_id = "toyota")
-                target = radars[asset].check_if_targets_in_same_bin( [target], 'range')
+
+
+                target_toyota, false_alarm = radars[asset].get_detections(translation_toyota, orientation_toyota, velocity, target_id = "toyota")
+                target_hamas, false_alarm = radars[asset].get_detections(translation_hamas, orientation_hamas, velocity, target_id = "hamas")
+                target = radars[asset].check_if_targets_in_same_bin( [target_toyota, target_hamas], 'range')
+
+                if len(target) > 0:
+                    target_angle = target[0]['az_world'][0] if len(target[0]['az_world']) > 0 else ptz_dict[asset]['rotation_ini'][2]
+                    target_elevation = target[0]['elevation'][0] if len(target[0]['elevation']) > 0 else ptz_dict[asset]['rotation_ini'][1]
+                    if slave == True:
+
+
+                        ptz_cams[asset][0].transform_camera([0,target_elevation,0],[0,0,0])
+
+
+                        angular = controller.angular_velocity_p_controller(target_angle*np.pi/180,ptz_dict[asset]['rotation'][2]*np.pi/180, asset, kp = 0.2)
+                        # set the velocity, orientation and zoom of the "camera" cube
+                        translation, orientation = ptz_cams[asset][1].get_position_and_orientation()
+                        # camera_orientation_kb = controller.update_orientation(mapping, asset)
+                        ptz_cams[asset][1].set_angular_velocity([np.array([0,0,angular*180/np.pi])], orientation)
+
+                        translation, orientation = ptz_cams[asset][1].get_position_and_orientation()
+                        current_euler_angles = rot_utils.quats_to_euler_angles(orientation, degrees=True)
+                        print(current_euler_angles, target_angle)
+                        ptz_dict[asset]['rotation'] = [0,target_elevation,current_euler_angles[2]]
+
+
+
+                        # ptz_cams[asset][1].set_angular_velocity([np.array([0,0,camera_orientation_kb[2]/15])], orientation)
+                        # camera_orientation,old_orientation_ptz = update_camera_orientation(mapping, asset,dt,ptz_dict[asset]['rotation'])
+                        # ptz_dict[asset]['rotation'] = old_orientation_ptz
+
+                        # ptz_dict[asset]['rotation'] = [0,target_elevation,target_angle]
+
                 target = {k: np.concatenate([np.atleast_1d(d.get(k, [])).tolist() for d in target]) for k in set().union(*target)}
                 detection = {"seq": frame_count, "time": round(time.time(),2)} | {key:np.hstack((target[key], false_alarm[key])).tolist() for key in target.keys()}
                 radar_rb.push(detection) # update the radar detection ring buffer
@@ -414,6 +425,7 @@ if __name__ == "__main__":
 
             translation_toyota, orientation_toyota = time_tick_spline_asset(spline_assets['toyota'],'toyota',splines,controller,0)
             translation_hamas, orientation_hamas = time_tick_spline_asset(spline_assets['hamas'],'hamas',splines,controller,0)
+            translation_kela, orientation_kela = time_tick_spline_asset(spline_assets['kela'],'kela',splines,controller,0)
 
 
 
@@ -425,6 +437,7 @@ if __name__ == "__main__":
                 restart_time = now
                 toyota.set_pose(translation=np.array(splines['toyota']['spline_points'][0]), orientation = np.array([0,0,splines['toyota']['euler_initial_angles']]),local = False)
                 hamas.set_pose(translation=np.array(splines['hamas']['spline_points'][0]), orientation = np.array([0,0,splines['hamas']['euler_initial_angles']]),local = False)
+
 
 
             #___________________________________________________________________________________________________________
@@ -441,8 +454,7 @@ if __name__ == "__main__":
 
 
             step_time = time.perf_counter()
-
-
+            thermal_flag = controller.thermal_camera(thermal_flag, mapping, asset)
             # if should_render is True, get the camera frame and add it to the queue for processing
 
             if should_render:
@@ -450,7 +462,7 @@ if __name__ == "__main__":
                 last_time = now
 
                 if asset in ptz_dict:
-                    frame_rgb_bytes = ptz_cams[asset][0].frame_in_bytes(None, az_deg=detection.get('az_world', None), r_m=detection.get('range', None), polar_plot = ptz_dict[asset]['radar_plot'])
+                    frame_rgb_bytes = ptz_cams[asset][0].frame_in_bytes(None, az_deg=detection.get('az_world', None), r_m=detection.get('range', None), polar_plot = ptz_dict[asset]['radar_plot'], thermal = thermal_flag)
                 else:
                     frame_rgb_bytes = drone_camera.frame_in_bytes(None, az_deg=None, r_m=None, polar_plot = None)
                     

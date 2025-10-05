@@ -1,12 +1,17 @@
 
 
 import numpy as np
-
+import time
 class Controller():
     """Manages the control inputs and mappings for the simulation."""
 
     def __init__(self, mapper):
         self.cfg = mapper['profiles']
+        self.thermal_prev = {}
+        self.thermal_last_toggle = {}
+        self.debounce_s = 0.2
+        self.slave_prev = {}
+        self.slave_last_toggle = {}
 
     def zoom_factor(self, mapping,key):
         return mapping[key]['zoom'] if key in mapping and 'zoom' in mapping[key] else 1
@@ -68,6 +73,47 @@ class Controller():
             return True
 
         return False
+    
+
+    def debounce(self, last_toggle, debounce_s):
+        """Debounces a button press."""
+        now = time.perf_counter()
+        last = 0.0 if last_toggle is None else last_toggle
+        if (now - last) >= debounce_s:
+            return True, now
+        return False, last_toggle
+
+
+    def thermal_camera(self, thermal,mapping,key):
+        pressed = mapping[key]['thermal'] if key in mapping and 'thermal' in mapping[key] else False # check if key is pressed
+        was_pressed = self.thermal_prev.get(key, False) # check if key was pressed last frame
+        if pressed and not was_pressed: # if key is pressed now but wasn't last frame, toggle thermal
+            allowed, ts = self.debounce(self.thermal_last_toggle.get(key), self.debounce_s) # check debounce for minimum time between toggles
+            if allowed: # if debounce passed, toggle thermal
+                thermal = not thermal
+                self.thermal_last_toggle[key] = ts # save last toggle time
+
+        # Update prev for next frame
+        self.thermal_prev[key] = pressed
+        return thermal
+    
+
+
+    def enslave_camera(self, thermal,mapping,key):
+        pressed = mapping[key]['slave'] if key in mapping and 'slave' in mapping[key] else False # check if key is pressed
+        was_pressed = self.slave_prev.get(key, False) # check if key was pressed last frame
+        if pressed and not was_pressed: # if key is pressed now but wasn't last frame, toggle slave
+            allowed, ts = self.debounce(self.slave_last_toggle.get(key), self.debounce_s) # check debounce for minimum time between toggles
+            if allowed: # if debounce passed, toggle slave
+                thermal = not thermal
+                self.slave_last_toggle[key] = ts # save last toggle time
+
+        # Update prev for next frame
+        self.slave_prev[key] = pressed
+        return thermal
+
+
+    
 
     def angular_velocity_p_controller(self,desired_angle_rad,current_angle_rad, asset_name, kp = 1 ):
         """ Proportional controller for angular velocity to reach a desired angle.  """

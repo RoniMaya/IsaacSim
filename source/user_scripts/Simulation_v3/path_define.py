@@ -29,9 +29,10 @@ STAGE_PATH_OGMAR         = apath("Ogmar80","odm_texturing", "odm_textured_model_
 STAGE_PATH_GAN_SHOMRON         = apath("Gan_Shomron","odm_texturing", "odm_textured_model_geo.usd")
 STAGE_PATH_TEL_KUDNA         = apath("Tel-Kudna-North-all","odm_texturing", "odm_textured_model_geo.usd")
 STAGE_PATH_LATRUN_4         = apath("latrun","latrun_1_3000-all","odm_texturing", "cropped_1_3000.usd")
-STAGE_PATH_LATRUN_3       = apath("latrun","Task-of-2025-09-27T063558178Z-all", "odm_texturing", "croped_odm_textured_model_geo.usd")
+STAGE_PATH_LATRUN_3       = apath("latrun","Copy-of-latrun_3001_5500-all", "odm_texturing", "odm_textured_model_geo.usd")
 STAGE_PATH_LATRUN_2       = apath("latrun","latrun_5000_7999-all","odm_texturing", "cropped_5000_7999.usd")
-STAGE_PATH_LATRUN_1       = apath("latrun","latrun_7500_10225-all","odm_texturing", "odm_textured_model_geo.usd")
+STAGE_PATH_LATRUN_1       = apath("latrun","latrun_7500_10300","odm_texturing", "odm_textured_model_geo.usd")
+STAGE_PATH_LATRUN_5    = apath("latrun"," latrun_last_scan_east", "odm_texturing","odm_textured_model_geo.usd")
 
 CAR_ORANGE_ASSET_PATH     = apath("assets","car", "car_v7.usd")
 CAR_BLACK_ASSET_PATH     = apath("assets","car", "car_v9_rough.usd")
@@ -49,13 +50,15 @@ RADAR_PROP_PATH    = apath("radar", "MAGOS.yaml")
 COORDINATES_GS    = apath("Gan_Shomron", "odm_georeferencing","coords.txt")
 COORDINATES_TK    = apath("Tel-Kudna-North-all", "odm_georeferencing","coords.txt")
 COORDINATES_LATRUN_4    = apath("latrun","latrun_1_3000-all", "odm_georeferencing","coords.txt")
-COORDINATES_LATRUN_3    = apath("latrun","Task-of-2025-09-27T063558178Z-all", "odm_georeferencing","coords.txt")
+COORDINATES_LATRUN_3    = apath("latrun","Copy-of-latrun_3001_5500-all", "odm_georeferencing","coords.txt")
 COORDINATES_LATRUN_2    = apath("latrun","latrun_5000_7999-all", "odm_georeferencing","coords.txt")
-COORDINATES_LATRUN_1    = apath("latrun","latrun_7500_10225-all", "odm_georeferencing","coords.txt")
+COORDINATES_LATRUN_1    = apath("latrun","latrun_7500_10300", "odm_georeferencing","coords.txt")
+COORDINATES_LATRUN_5    = apath("latrun"," latrun_last_scan_east", "odm_georeferencing","coords.txt")
 
 GEOJSON_GS    = apath("gs_coordinates")
 GEOJSON_TK    = apath("tk_coordinates")
 GEOJSON_LATRUN    = apath("latrun_coordinates")
+
 
 def validate_local_paths():
     """

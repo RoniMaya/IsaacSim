@@ -34,9 +34,10 @@ class VideoPublisher():
             "-preset", "ultrafast", # choose the fastest encoding settings (lowest CPU, larger bitrate).
             "-tune", "zerolatency", # minimize internal buffering/lookahead for low latency streaming.
             "-pix_fmt", "yuv420p", # set the output pixel format to YUV 4:2:0 (most compatible for H.264).
-            "-g", "120", "-keyint_min", "120", #maximum GOP (group of pictures) length: put an IDR (keyframe) at most every 120 frames. (used for compression)
+            "-g", "30", "-keyint_min", "30", "-bf","0", #maximum GOP (group of pictures) length: put an IDR (keyframe) at most every 30 frames. (used for compression)
             "-sc_threshold", "0", # disable scene-cut keyframes, keeping GOP length constant.
-            "-maxrate", "4M", "-bufsize", "8M", # limit the bitrate to 4Mbps with a 8Mbps buffer (helps with streaming).
+            "-x264-params","repeat-headers=1",
+            "-maxrate", "4M", "-bufsize", "4M", # limit the bitrate to 4Mbps with a 8Mbps buffer (helps with streaming).
             "-f", "rtsp", "-rtsp_transport", "tcp", # use RTSP protocol over TCP (more reliable than UDP).
             "rtsp://localhost:8554/mystream" # the RTSP server URL (make sure to match the server configuration).
         ]

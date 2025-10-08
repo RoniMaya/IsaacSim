@@ -46,9 +46,11 @@ from DynamicAssets import ptz
 from PolarPlotReusable import PolarPlotReusable
 from pxr import UsdShade, Sdf
 from path_define import (
-    CFG_FILE, STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON,STAGE_PATH_TEL_KUDNA,STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2, STAGE_PATH_LATRUN_3, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH,
-    TEXTURE_SKY, CESIUM_TRANSFORM,WHITE_TOYOTA,TANK,MEHOLA,STAGE_PATH_LATRUN_4,STAGE_PATH_LATRUN_4,COORDINATES_LATRUN_4,HAMAS,RADAR,KELA,
-    RCS_FILE_PATH, RADAR_PROP_PATH, COORDINATES_GS,COORDINATES_TK,COORDINATES_LATRUN_1,COORDINATES_LATRUN_2,COORDINATES_LATRUN_3, GEOJSON_GS, GEOJSON_TK, GEOJSON_LATRUN
+    CFG_FILE, STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON,STAGE_PATH_TEL_KUDNA,STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2, STAGE_PATH_LATRUN_3,
+    STAGE_PATH_LATRUN_5, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH,
+    TEXTURE_SKY, CESIUM_TRANSFORM,WHITE_TOYOTA,TANK,MEHOLA,STAGE_PATH_LATRUN_4,COORDINATES_LATRUN_4,COORDINATES_LATRUN_5,HAMAS,RADAR,KELA,
+    RCS_FILE_PATH, RADAR_PROP_PATH, COORDINATES_GS,COORDINATES_TK,COORDINATES_LATRUN_1,COORDINATES_LATRUN_2,COORDINATES_LATRUN_3, GEOJSON_GS, 
+    GEOJSON_TK, GEOJSON_LATRUN
 )
 
 print("Paths:", STAGE_PATH_OGMAR, STAGE_PATH_GAN_SHOMRON, STAGE_PATH_TEL_KUDNA, STAGE_PATH_LATRUN_1, STAGE_PATH_LATRUN_2, STAGE_PATH_LATRUN_3, CAR_ORANGE_ASSET_PATH, CAR_BLACK_ASSET_PATH, TEXTURE_SKY, CESIUM_TRANSFORM, RCS_FILE_PATH, RADAR_PROP_PATH, COORDINATES_GS, COORDINATES_TK, GEOJSON_GS, GEOJSON_TK)
@@ -154,8 +156,8 @@ if __name__ == "__main__":
     coords_path = COORDINATES_LATRUN_1
     stage_path = STAGE_PATH_LATRUN_1
 
-    stage_file_path = [STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2,STAGE_PATH_LATRUN_3,STAGE_PATH_LATRUN_4]
-    geo_coordinates_stage = [COORDINATES_LATRUN_1,COORDINATES_LATRUN_2,COORDINATES_LATRUN_3,COORDINATES_LATRUN_4]
+    stage_file_path = [STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2,STAGE_PATH_LATRUN_3,STAGE_PATH_LATRUN_4,STAGE_PATH_LATRUN_5]
+    geo_coordinates_stage = [COORDINATES_LATRUN_1,COORDINATES_LATRUN_2,COORDINATES_LATRUN_3,COORDINATES_LATRUN_4,COORDINATES_LATRUN_5]
 
 
 
@@ -171,11 +173,11 @@ if __name__ == "__main__":
     ptz_cams = list(ptz_dict.keys())
 
     poi_geofile = ptz_cams + ['tank','tank2','mehola','mehola2']
-    height_poi = {'CamEast': 2, 'CamWest': 2,'CamNorth': 2, 'perimeter_circle': 15, 'tank': 2, 'drone': 20, 'toyota': 0,'tank2': 2,'mehola':1, 'hamas': 0.5,'mehola2':1,'kela':0.5}
-    geo_spline_names = ['toyota','drone_part','hamas','perimeter_circle','kela']
-    assets_names = ['toyota','drone','hamas','perimeter_circle','kela','tank','tank2','mehola','mehola2']
+    height_poi = {'CamEast': 2, 'CamWest': 2,'CamNorth': 2, 'perimeter_circle': 15, 'tank': 2, 'drone': 20, 'toyota': 0,'tank2': 2,'mehola':1, 'hamas': 1,'mehola2':1,'kela':0.5}
+    geo_spline_names = ['toyota','drone_part','hamas1','hamas2','perimeter_circle','kela']
+    assets_names = ['toyota','drone','hamas1','hamas2','perimeter_circle','kela','tank','tank2','mehola','mehola2']
 
-    drone_path = "/World/drone"
+    drone_path = "/World/path_drone"
     camera_path = "/World/camera_prim"
     cameras_path = [f"/World/{camera_name}_prim" for camera_name in ptz_cams]
     toyota_path  = "/World/vehicles/toyota"
@@ -183,7 +185,8 @@ if __name__ == "__main__":
     tank2_path = "/World/vehicles/tank2"
     mehola_path = "/World/mehola"
     mehola2_path = "/World/mehola2"
-    hamas_path = "/World/soldiers/hamas"
+    hamas1_path = "/World/soldiers/hamas1"
+    hamas2_path = "/World/soldiers/hamas2"
     perimeter_circle_path = "/World/perimeter_circle"
     kela_path = "/World/soldiers/kela"
 
@@ -252,11 +255,17 @@ if __name__ == "__main__":
 
 
     # DynamicCuboid(prim_path=f"{hamas_path}", color=np.array([0, 255, 0]))
-    hamas = spawn_spline_asset(hamas_path,HAMAS, splines['hamas'], height=height_poi['hamas'], scale = [0.5,0.5,0.5], opacity = 0)
-    splines['hamas']['spline_points'][:,2] = splines['hamas']['spline_points'][:,2] + height_poi['hamas'] # set the hamas height
-    splines['hamas']['spline_points'],splines['hamas']['spline_points_der'], _ = Utils.generate_spline_path_from_enu(splines['hamas']['spline_points'], spline_param = 3, num_samples = 500, add_z = 0)
-    hamas.disable_gravity()
+    hamas1 = spawn_spline_asset(hamas1_path,HAMAS, splines['hamas1'], height=height_poi['hamas'], scale = [0.5,0.5,0.5], opacity = 0)
+    splines['hamas1']['spline_points'][:,2] = splines['hamas1']['spline_points'][:,2] + height_poi['hamas'] # set the hamas height
+    splines['hamas1']['spline_points'],splines['hamas1']['spline_points_der'], _ = Utils.generate_spline_path_from_enu(splines['hamas1']['spline_points'], spline_param = 3, num_samples = 500, add_z = 0)
+    hamas1.disable_gravity()
 
+
+    # DynamicCuboid(prim_path=f"{hamas_path}", color=np.array([0, 255, 0]))
+    hamas2 = spawn_spline_asset(hamas2_path,HAMAS, splines['hamas2'], height=height_poi['hamas'], scale = [0.5,0.5,0.5], opacity = 0)
+    splines['hamas2']['spline_points'][:,2] = splines['hamas2']['spline_points'][:,2] + height_poi['hamas'] # set the hamas height
+    splines['hamas2']['spline_points'],splines['hamas2']['spline_points_der'], _ = Utils.generate_spline_path_from_enu(splines['hamas2']['spline_points'], spline_param = 3, num_samples = 500, add_z = 0)
+    hamas2.disable_gravity()
 
 
 
@@ -280,7 +289,7 @@ if __name__ == "__main__":
 
 
 
-    spline_assets = { 'toyota': toyota, 'drone': drone , 'hamas': hamas, 'kela': kela }
+    spline_assets = { 'toyota': toyota, 'drone': drone , 'hamas1': hamas1, 'hamas2': hamas2, 'kela': kela }
 
 
 
@@ -365,33 +374,38 @@ if __name__ == "__main__":
                 ptz_cams[asset][0].zoom_camera(zoom_factor)
 
 
-                slave = controller.enslave_camera(slave, mapping, asset)
+                slave = controller.toggle(slave, mapping, asset, 'slave')
                 if slave == False:
-                    ptz_cams[asset][0].transform_camera([0,camera_orientation[1],0],[0,0,0])
+                    ptz_cams[asset][0].transform_camera([0,ptz_dict[asset]['rotation'][1],0],[0,0,0])
 
                     #----------------------------------------------------------------------------
                     # set the velocity, orientation and zoom of the "camera" cube
                     translation, orientation = ptz_cams[asset][1].get_position_and_orientation()
                     camera_orientation_kb = controller.update_orientation(mapping, asset)
                     ptz_cams[asset][1].set_angular_velocity([np.array([0,0,camera_orientation_kb[2]/15])], orientation)
-                    camera_orientation,old_orientation_ptz = update_camera_orientation(mapping, asset,dt,ptz_dict[asset]['rotation'])
+                    camera_orientation_ptz,old_orientation_ptz = update_camera_orientation(mapping, asset,dt,ptz_dict[asset]['rotation'])
                     ptz_dict[asset]['rotation'] = old_orientation_ptz
 
 
 
                 target_toyota, false_alarm = radars[asset].get_detections(translation_toyota, orientation_toyota, velocity, target_id = "toyota")
-                target_hamas, false_alarm = radars[asset].get_detections(translation_hamas, orientation_hamas, velocity, target_id = "hamas")
-                target = radars[asset].check_if_targets_in_same_bin( [target_toyota, target_hamas], 'range')
+                target_hamas1, false_alarm = radars[asset].get_detections(translation_hamas1, orientation_hamas1, velocity, target_id = "hamas1")
+                target_hamas2, false_alarm = radars[asset].get_detections(translation_hamas2, orientation_hamas2, velocity, target_id = "hamas2")
+                target = radars[asset].check_if_targets_in_same_bin( [target_toyota, target_hamas1, target_hamas2], 'range')
 
                 if len(target) > 0:
-                    target_angle = target[0]['az_world'][0] if len(target[0]['az_world']) > 0 else ptz_dict[asset]['rotation_ini'][2]
-                    target_elevation = target[0]['elevation'][0] if len(target[0]['elevation']) > 0 else ptz_dict[asset]['rotation_ini'][1]
+                    if asset == 'CamEast':
+                        track_asset = target_hamas2
+                    elif asset == 'CamWest':
+                        track_asset = target_toyota
+                    elif asset == 'CamNorth':
+                        track_asset = target_hamas1
+                    target_angle = track_asset['az_world'][0] if len(track_asset['az_world']) > 0 else ptz_dict[asset]['rotation'][2]
+                    target_elevation = track_asset['elevation'][0] if len(track_asset['elevation']) > 0 else ptz_dict[asset]['rotation'][1]
                     if slave == True:
 
 
                         ptz_cams[asset][0].transform_camera([0,target_elevation,0],[0,0,0])
-
-
                         angular = controller.angular_velocity_p_controller(target_angle*np.pi/180,ptz_dict[asset]['rotation'][2]*np.pi/180, asset, kp = 0.2)
                         # set the velocity, orientation and zoom of the "camera" cube
                         translation, orientation = ptz_cams[asset][1].get_position_and_orientation()
@@ -400,7 +414,7 @@ if __name__ == "__main__":
 
                         translation, orientation = ptz_cams[asset][1].get_position_and_orientation()
                         current_euler_angles = rot_utils.quats_to_euler_angles(orientation, degrees=True)
-                        print(current_euler_angles, target_angle)
+                        # print(current_euler_angles, target_angle)
                         ptz_dict[asset]['rotation'] = [0,target_elevation,current_euler_angles[2]]
 
 
@@ -424,7 +438,8 @@ if __name__ == "__main__":
             time_tick_spline_asset(spline_assets['drone'],'drone',splines,controller,velocity_control)
 
             translation_toyota, orientation_toyota = time_tick_spline_asset(spline_assets['toyota'],'toyota',splines,controller,0)
-            translation_hamas, orientation_hamas = time_tick_spline_asset(spline_assets['hamas'],'hamas',splines,controller,0)
+            translation_hamas1, orientation_hamas1 = time_tick_spline_asset(spline_assets['hamas1'],'hamas1',splines,controller,0)
+            translation_hamas2, orientation_hamas2 = time_tick_spline_asset(spline_assets['hamas2'],'hamas2',splines,controller,0)
             translation_kela, orientation_kela = time_tick_spline_asset(spline_assets['kela'],'kela',splines,controller,0)
 
 
@@ -436,7 +451,8 @@ if __name__ == "__main__":
             if controller.reset_asset(mapping, asset) :
                 restart_time = now
                 toyota.set_pose(translation=np.array(splines['toyota']['spline_points'][0]), orientation = np.array([0,0,splines['toyota']['euler_initial_angles']]),local = False)
-                hamas.set_pose(translation=np.array(splines['hamas']['spline_points'][0]), orientation = np.array([0,0,splines['hamas']['euler_initial_angles']]),local = False)
+                hamas1.set_pose(translation=np.array(splines['hamas1']['spline_points'][0]), orientation = np.array([0,0,splines['hamas1']['euler_initial_angles']]),local = False)
+                hamas2.set_pose(translation=np.array(splines['hamas2']['spline_points'][0]), orientation = np.array([0,0,splines['hamas2']['euler_initial_angles']]),local = False)
 
 
 
@@ -454,7 +470,7 @@ if __name__ == "__main__":
 
 
             step_time = time.perf_counter()
-            thermal_flag = controller.thermal_camera(thermal_flag, mapping, asset)
+            thermal_flag = controller.toggle(thermal_flag, mapping, asset, 'thermal')
             # if should_render is True, get the camera frame and add it to the queue for processing
 
             if should_render:

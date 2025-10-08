@@ -7,11 +7,15 @@ class Controller():
 
     def __init__(self, mapper):
         self.cfg = mapper['profiles']
-        self.thermal_prev = {}
-        self.thermal_last_toggle = {}
+        # self.thermal_prev = {}
+        self.last_toggle = {'thermal': {}, 'slave': {}}
+        self.prev_state = {'thermal': {}, 'slave': {}}
+
+
+        # self.thermal_last_toggle = {}
         self.debounce_s = 0.2
-        self.slave_prev = {}
-        self.slave_last_toggle = {}
+        # self.slave_prev = {}
+        # self.slave_last_toggle = {}
 
     def zoom_factor(self, mapping,key):
         return mapping[key]['zoom'] if key in mapping and 'zoom' in mapping[key] else 1
@@ -82,6 +86,20 @@ class Controller():
         if (now - last) >= debounce_s:
             return True, now
         return False, last_toggle
+
+
+    def toggle(self,asset, mapping,asset_name,controll_function):
+        pressed = mapping[asset_name][controll_function] if asset_name in mapping and controll_function in mapping[asset_name] else False # check if key is pressed
+        was_pressed = self.prev_state[controll_function].get(asset_name, False) # check if key was pressed last frame
+        if pressed and not was_pressed: # if key is pressed now but wasn't last frame, toggle thermal
+            allowed, ts = self.debounce(self.last_toggle[controll_function].get(asset_name), self.debounce_s) # check debounce for minimum time between toggles
+            if allowed: # if debounce passed, toggle thermal
+                asset = not asset
+                self.last_toggle[controll_function][asset_name] = ts # save last toggle time
+        # Update prev for next frame
+        self.prev_state[controll_function][asset_name] = pressed
+        return asset
+
 
 
     def thermal_camera(self, thermal,mapping,key):

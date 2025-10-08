@@ -64,9 +64,13 @@ class GeoJSONLoader():
         return self.utm_to_enu(utm_coords[0], utm_coords[1])
 
 
-    def get_spline(self,num_samples= 1000):
+    def get_spline(self,num_samples= 1000, get_collisions = False,height= 0):
         coords_enu = self.lat_lon_to_enu()
         spline_points, spline_points_der,euler_initial_angles = Utils.generate_spline_path_from_enu(coords_enu, spline_param = 3, num_samples = num_samples, add_z = 0)
+        if get_collisions == True:
+            spline_points = np.vstack(Utils.get_collisions( spline_points,height=height))
+        spline_points, spline_points_der,euler_initial_angles = Utils.generate_spline_path_from_enu(spline_points, spline_param = 3, num_samples = num_samples, add_z = 0)
+
         return spline_points, spline_points_der, euler_initial_angles
     
 

@@ -220,10 +220,10 @@ if __name__ == "__main__":
 
 
     asset_toyota = {'name':'toyota','path':"/World/vehicles/toyota",'geo':'toyota', 'usd_path': WHITE_TOYOTA, 'scale': [2,2,2],'height':1, 'gravity': True,'cfg':'toyota'}
-    asset_hamas1_1 = {'name':'hamas1_1','path':"/World/soldiers/hamas1_1",'geo':'hamas1_1', 'usd_path': HAMAS, 'scale': [0.5,0.5,0.5],'height':0.5,'gravity': False,'cfg':'hamas'}
-    asset_hamas1_2 = {'name':'hamas1_2','path':"/World/soldiers/hamas1_2",'geo':'hamas1_2', 'usd_path': HAMAS, 'scale': [0.5,0.5,0.5],'height':0.5,'gravity': False,'cfg':'hamas'}
-    asset_hamas1_3 = {'name':'hamas1_3','path':"/World/soldiers/hamas1_3",'geo':'hamas1_3', 'usd_path': HAMAS, 'scale': [0.5,0.5,0.5],'height':0.5,'gravity': False,'cfg':'hamas'}
-
+    asset_toyota_2 = {'name':'toyota2','path':"/World/vehicles/toyota2",'geo':'toyota2', 'usd_path': WHITE_TOYOTA, 'scale': [2,2,2],'height':1, 'gravity': True,'cfg':'toyota2'}
+    asset_hamas1_1 = {'name':'hamas1_1','path':"/World/soldiers/hamas1_1",'geo':'hamas1_1', 'usd_path': HAMAS, 'scale': [0.5,0.5,0.5],'height':0.5,'gravity': False,'cfg':'hamas11'}
+    asset_hamas1_2 = {'name':'hamas1_2','path':"/World/soldiers/hamas1_2",'geo':'hamas1_2', 'usd_path': HAMAS, 'scale': [0.5,0.5,0.5],'height':0.5,'gravity': False,'cfg':'hamas11'}
+    asset_hamas1_3 = {'name':'hamas1_3','path':"/World/soldiers/hamas1_3",'geo':'hamas1_3', 'usd_path': HAMAS, 'scale': [0.5,0.5,0.5],'height':0.5,'gravity': False,'cfg':'hamas11'}
 
     asset_hamas2 = {'name':'hamas2','path':"/World/soldiers/hamas2", 'geo':'hamas2', 'usd_path': HAMAS, 'scale': [0.5,0.5,0.5],'height':0.5,'gravity': False,'cfg':'hamas'}
     asset_mehola = {'name':'mehola','path':"/World/mehola", 'geo':'mehola', 'usd_path': MEHOLA, 'scale': [5,5,5],'height':1}
@@ -234,9 +234,9 @@ if __name__ == "__main__":
     asset_perimeter_circle = {'name':'perimeter_square','path':"/World/perimeter_square", 'geo':'perimeter_square', 'usd_path': None,'height':15,'opacity':0.1,'cfg':'perimeter_circle'}
     asset_drone = {'name':'drone','path':"/World/drone", 'geo':'drone_part', 'usd_path': None,'height':20,'opacity':0.5, 'resolution': [width, height],'cfg':'drone'}
 
-    track_with_radar = {'toyota':asset_toyota,'hamas1_1':asset_hamas1_1,'hamas2':asset_hamas2}
+    track_with_radar = {'toyota':asset_toyota,'hamas1_1':asset_hamas1_1,'hamas1_2':asset_hamas1_2,'hamas1_3':asset_hamas1_3,'hamas2':asset_hamas2, 'toyota2':asset_toyota_2}
 
-    assets_animation_list = [asset_toyota,asset_hamas1_1,asset_hamas1_2,asset_hamas1_3,asset_hamas2,asset_kela]
+    assets_animation_list = [asset_toyota,asset_toyota_2,asset_hamas1_1,asset_hamas1_2,asset_hamas1_3,asset_hamas2,asset_kela]
     drone_list = [asset_drone]
     perimeters_list = [asset_perimeter_circle]
     assets_static_list = [asset_mehola,asset_mehola2,asset_tank,asset_tank2]

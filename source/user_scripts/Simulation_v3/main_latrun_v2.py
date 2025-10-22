@@ -199,7 +199,7 @@ if __name__ == "__main__":
     stage_file_path = [STAGE_PATH_LATRUN_1,STAGE_PATH_LATRUN_2,STAGE_PATH_LATRUN_3,STAGE_PATH_LATRUN_4,STAGE_PATH_LATRUN_5]
     geo_coordinates_stage = [COORDINATES_LATRUN_1,COORDINATES_LATRUN_2,COORDINATES_LATRUN_3,COORDINATES_LATRUN_4,COORDINATES_LATRUN_5]
 
-
+ 
 
     ptz_dict = {f'CamEast' : {'usd_path':None,'path':f"/World/cameras/CamEast", 'rotation': [0,0,0], 'rotation_ini': [0,0,0],'radar_angle':[0,90,0],
                                'radar_path':f"/World/radar0",'color':(0.0,1.0,0.0),'poi_location': None,'height':2,

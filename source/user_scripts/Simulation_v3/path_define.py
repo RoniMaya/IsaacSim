@@ -23,7 +23,7 @@ def apath(*parts: str) -> str:
     else:
         return str(Path(BASE, *parts))
 
-# Your project paths (all relative to BASE)
+# Project paths (all relative to BASE)
 CFG_FILE           = apath("bindings_tgl.yaml")
 STAGE_PATH_OGMAR         = apath("Ogmar80","odm_texturing", "odm_textured_model_geo.usd")
 STAGE_PATH_GAN_SHOMRON         = apath("Gan_Shomron","odm_texturing", "odm_textured_model_geo.usd")

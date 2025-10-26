@@ -60,6 +60,8 @@ GEOJSON_TK    = apath("tk_coordinates")
 GEOJSON_LATRUN    = apath("latrun_coordinates")
 
 
+
+
 def validate_local_paths():
     """
     Optional: quick sanity check when using local filesystem.

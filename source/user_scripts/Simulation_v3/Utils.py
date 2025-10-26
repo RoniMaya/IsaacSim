@@ -251,9 +251,8 @@ def overlay_polar_inset(frame_rgba, az_deg, r_m, snr=None, r_max=300, pos=(20, 2
 
 
 def record_to_EN(rec):
-    # Your records are already UTM (meters), just badly named.
-    E = float(rec['lat'])  # actually Easting
-    N = float(rec['lon'])  # actually Northing
+    E = float(rec['lat'])  # Easting
+    N = float(rec['lon'])  # Northing
     return E, N
 
 def new_origin_of_part(origin_utm, origin_utm_piece2):
